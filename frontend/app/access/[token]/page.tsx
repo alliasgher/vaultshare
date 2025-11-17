@@ -186,7 +186,7 @@ export default function FileAccessPage() {
         downloadFile(data.download_url, data.filename);
       }
       
-      // Refresh file data to update view count
+      // Refresh file data to update download count
       setTimeout(async () => {
         try {
           const refreshedData = await publicAPI.validate({
@@ -197,7 +197,7 @@ export default function FileAccessPage() {
         } catch (err) {
           console.error('Failed to refresh file data:', err);
         }
-      }, 500);
+      }, 1500);
     } catch (err: unknown) {
       const errorMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setError(errorMessage || 'Failed to download file.');
@@ -232,7 +232,7 @@ export default function FileAccessPage() {
         } catch (err) {
           console.error('Failed to refresh file data:', err);
         }
-      }, 500);
+      }, 1500);
     } catch (err: unknown) {
       const errorMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setError(errorMessage || 'Failed to view file.');
