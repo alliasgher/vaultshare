@@ -317,12 +317,6 @@ export default function FileAccessPage() {
                       <dd className="text-gray-900 font-medium">{fileData.file.content_type}</dd>
                     </div>
                     <div>
-                      <dt className="text-gray-500">Views Remaining</dt>
-                      <dd className="text-gray-900 font-medium">
-                        {fileData.file.views_remaining} of {fileData.file.max_views}
-                      </dd>
-                    </div>
-                    <div>
                       <dt className="text-gray-500">Expires In</dt>
                       <dd className="text-gray-900 font-medium">{fileData.file.time_remaining}</dd>
                     </div>
@@ -448,26 +442,28 @@ export default function FileAccessPage() {
                   </div>
                 )}
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleView}
-                    disabled={viewing}
-                    className="flex-1 flex items-center justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <EyeIcon className="w-5 h-5 mr-2" />
-                    {viewing ? 'Loading...' : viewUrl ? 'Refresh Preview' : 'View File'}
-                  </button>
-                  
-                  <button
-                    onClick={handleDownload}
-                    disabled={downloading || fileData.file.disable_download}
-                    className="flex-1 flex items-center justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={fileData.file.disable_download ? 'Download is disabled for this file' : ''}
-                  >
-                    <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
-                    {downloading ? 'Downloading...' : fileData.file.disable_download ? 'Download Disabled' : 'Download File'}
-                  </button>
-                </div>
+                {!viewUrl && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleView}
+                      disabled={viewing}
+                      className="flex-1 flex items-center justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <EyeIcon className="w-5 h-5 mr-2" />
+                      {viewing ? 'Loading...' : 'View File'}
+                    </button>
+                    
+                    <button
+                      onClick={handleDownload}
+                      disabled={downloading || fileData.file.disable_download}
+                      className="flex-1 flex items-center justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={fileData.file.disable_download ? 'Download is disabled for this file' : ''}
+                    >
+                      <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
+                      {downloading ? 'Downloading...' : fileData.file.disable_download ? 'Download Disabled' : 'Download File'}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : null}
           </div>

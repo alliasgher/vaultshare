@@ -42,6 +42,13 @@ export default function DashboardPage() {
     }
 
     loadFiles();
+    
+    // Auto-refresh file stats every 5 seconds (doesn't create access logs)
+    const refreshInterval = setInterval(() => {
+      loadFiles();
+    }, 5000);
+
+    return () => clearInterval(refreshInterval);
   }, [isAuthenticated, router, hydrated]);
 
   const loadFiles = async () => {
