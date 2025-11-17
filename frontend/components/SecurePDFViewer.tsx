@@ -5,9 +5,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure PDF.js worker - using local worker file from public directory
-// Version: 5.4.296 (matches react-pdf's pdfjs-dist dependency)
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Worker is configured globally in PDFWorkerInit component
+// No need to configure it here - just use pdfjs.version for other resources
 
 interface SecurePDFViewerProps {
   url: string;
@@ -22,31 +21,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
-  const [pageError, setPageError] = useState<string | null>(null);
-  const [workerReady, setWorkerReady] = useState<boolean>(false);
   const documentRef = useRef<any>(null);
-
-  // Initialize worker and wait for it to be ready
-  useEffect(() => {
-    const initWorker = async () => {
-      try {
-        // Verify worker is accessible
-        const response = await fetch('/pdf.worker.min.mjs', { method: 'HEAD' });
-        if (response.ok) {
-          setWorkerReady(true);
-          console.log('PDF.js worker ready');
-        } else {
-          console.error('Worker file not accessible');
-          setError('PDF viewer initialization failed');
-        }
-      } catch (err) {
-        console.error('Worker initialization error:', err);
-        setError('PDF viewer initialization failed');
-      }
-    };
-
-    initWorker();
-  }, []);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     console.log('PDF loaded successfully:', { numPages, url });
@@ -61,15 +36,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
     console.error('PDF URL:', url);
     setError(error.message);
     setIsLoading(false);
-  }
-
-  function onPageLoadSuccess() {
-    setPageError(null);
-  }
-
-  function onPageLoadError(error: Error) {
-    console.error('Page load error:', error);
-    setPageError(error.message);
   }
 
   const toggleFullscreen = async () => {
@@ -178,61 +144,41 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
             )}
 
             {/* Only render Document when worker is ready */}
-            {!workerReady ? (
-              <div className="text-white text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
-                <p>Initializing PDF viewer...</p>
-              </div>
-            ) : (
-              <Document
-                file={url}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={onDocumentLoadError}
-                className="select-none"
-                options={{
-                  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-                  cMapPacked: true,
-                  standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
-                }}
-                loading={
-                  <div className="text-white text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
-                    <p>Loading PDF...</p>
-                  </div>
-                }
-              >
-                {numPages > 0 && (
-                  <Page
-                    key={`page_${pageNumber}`}
-                    pageNumber={pageNumber}
-                    scale={scale}
-                    className="select-none"
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    width={undefined}
-                    height={undefined}
-                    onLoadSuccess={onPageLoadSuccess}
-                    onLoadError={onPageLoadError}
-                    error={
-                      <div className="text-white text-center py-8">
-                        <p className="text-red-400 mb-2">Failed to load page {pageNumber}</p>
-                        <button
-                          onClick={() => setPageNumber(pageNumber)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                        >
-                          Retry
-                        </button>
-                      </div>
-                    }
-                    loading={
-                      <div className="text-white text-center py-8">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                      </div>
-                    }
-                  />
-                )}
-              </Document>
-            )}
+            <Document
+              file={url}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              className="select-none"
+              options={{
+                cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+                cMapPacked: true,
+                standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+              }}
+              loading={
+                <div className="text-white text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+                  <p>Loading PDF...</p>
+                </div>
+              }
+            >
+              {numPages > 0 && (
+                <Page
+                  key={`page_${pageNumber}`}
+                  pageNumber={pageNumber}
+                  scale={scale}
+                  className="select-none"
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                  width={undefined}
+                  height={undefined}
+                  loading={
+                    <div className="text-white text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  }
+                />
+              )}
+            </Document>
           </div>
         </div>
       </div>
