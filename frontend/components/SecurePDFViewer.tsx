@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -21,7 +21,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
-  const [pageLoading, setPageLoading] = useState<boolean>(false);
+  const documentRef = useRef<any>(null);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     console.log('PDF loaded successfully:', { numPages, url });
@@ -170,11 +170,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                   renderAnnotationLayer={false}
                   width={undefined}
                   height={undefined}
-                  onLoadSuccess={() => setPageLoading(false)}
-                  onLoadError={(err) => {
-                    console.error('Page load error:', err);
-                    setPageLoading(false);
-                  }}
                   loading={
                     <div className="text-white text-center py-8">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
