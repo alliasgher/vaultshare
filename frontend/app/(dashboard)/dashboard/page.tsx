@@ -55,8 +55,16 @@ export default function DashboardPage() {
     try {
       const data = await filesAPI.list();
       setFiles(Array.isArray(data) ? data : []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load files:', error);
+      
+      // If 401 error and we thought we were authenticated, force logout
+      if (error?.response?.status === 401 && isAuthenticated) {
+        logout();
+        router.push('/login');
+        return;
+      }
+      
       setFiles([]); // Set empty array on error
     } finally {
       setLoading(false);
