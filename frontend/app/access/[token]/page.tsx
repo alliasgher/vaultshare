@@ -76,8 +76,10 @@ export default function FileAccessPage() {
       return false;
     };
 
-    // Detect DevTools opening
+    // Detect DevTools opening (TEMPORARILY DISABLED FOR DEBUGGING)
     const detectDevTools = () => {
+      // Commented out to allow debugging
+      /*
       const threshold = 160;
       if (
         window.outerWidth - window.innerWidth > threshold ||
@@ -86,6 +88,7 @@ export default function FileAccessPage() {
         console.warn('DevTools detected');
         alert('⚠️ Developer tools detected.\n\nThis file is protected content.');
       }
+      */
     };
 
     // Monitor visibility changes (tab switching - potential screenshot)
