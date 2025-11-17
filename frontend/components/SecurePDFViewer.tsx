@@ -5,13 +5,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure PDF.js worker - use local worker from node_modules
-if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.js',
-    import.meta.url,
-  ).toString();
-}
+// Configure PDF.js worker - use jsdelivr CDN for reliability
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface SecurePDFViewerProps {
   url: string;
