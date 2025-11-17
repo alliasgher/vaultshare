@@ -5,8 +5,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure PDF.js worker - use local worker file for faster loading
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Configure PDF.js worker - use Next.js static assets for immediate availability
+pdfjs.GlobalWorkerOptions.workerSrc = '/_next/static/chunks/pdf.worker.min.mjs';
 
 interface SecurePDFViewerProps {
   url: string;
