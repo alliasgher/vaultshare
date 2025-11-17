@@ -5,8 +5,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure PDF.js worker - use jsdelivr CDN for reliability
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Configure PDF.js worker - use local worker file for faster loading
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 interface SecurePDFViewerProps {
   url: string;
@@ -159,15 +159,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                   <p>Loading PDF...</p>
                 </div>
               }
-              error={
-                hasLoadedOnce ? null : (
-                  <div className="text-red-400 text-center py-12">
-                    <p className="font-semibold mb-2">Failed to load PDF</p>
-                    {error && <p className="text-sm text-gray-400">{error}</p>}
-                    <p className="text-xs text-gray-500 mt-2">Check browser console for details</p>
-                  </div>
-                )
-              }
             >
               {numPages > 0 && (
                 <Page
@@ -187,11 +178,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                   loading={
                     <div className="text-white text-center py-8">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                    </div>
-                  }
-                  error={
-                    <div className="text-red-400 text-center py-8">
-                      <p className="text-sm">Error loading page {pageNumber}</p>
                     </div>
                   }
                 />
