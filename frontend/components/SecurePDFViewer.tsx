@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Use CDN with exact version from installed pdfjs-dist package
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Keep worker and API versions matched
+pdfjs.GlobalWorkerOptions.workerSrc =
+  `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+function Loader({ text }: { text: string }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-gray-900 pointer-events-none">
+      <div className="text-white text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2" />
+        <p>{text}</p>
+      </div>
+    </div>
+  );
+}
 
 interface SecurePDFViewerProps {
   url: string;
@@ -14,30 +26,15 @@ interface SecurePDFViewerProps {
 }
 
 export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps) {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [numPages, setNumPages] = useState(0);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pageReady, setPageReady] = useState<boolean>(false);
-  const documentRef = useRef<any>(null);
+  const [pageReady, setPageReady] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
 
-  // Reset pageReady when page number changes
-  useEffect(() => {
-    setPageReady(false);
-  }, [pageNumber]);
-
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    console.log('PDF loaded successfully:', { numPages, url });
-    setNumPages(numPages);
-    setError(null);
-  }
-
-  function onDocumentLoadError(error: Error) {
-    console.error('PDF load error:', error);
-    console.error('PDF URL:', url);
-    setError(error.message);
-  }
+  // reset ready flag when page changes
+  useEffect(() => { setPageReady(false); }, [pageNumber]);
 
   const toggleFullscreen = async () => {
     const container = document.getElementById('pdf-fullscreen-container');
@@ -76,130 +73,84 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
     <div id="pdf-fullscreen-container" className="flex flex-col h-full bg-gray-900">
       {/* Controls */}
       <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-b border-gray-700">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-4">
           <button
-            onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
+            onClick={() => setPageNumber(p => Math.max(1, p - 1))}
             disabled={pageNumber <= 1 || numPages === 0}
-            className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            ←
-          </button>
+            className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 text-sm"
+          >←</button>
           <span className="text-white text-sm">
-            {numPages > 0 ? `Page ${pageNumber} of ${numPages}` : 'Loading...'}
+            {numPages ? `Page ${pageNumber} of ${numPages}` : 'Loading…'}
           </span>
           <button
-            onClick={() => setPageNumber(Math.min(numPages, pageNumber + 1))}
+            onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
             disabled={pageNumber >= numPages || numPages === 0}
-            className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            →
-          </button>
+            className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 text-sm"
+          >→</button>
         </div>
-
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setScale(Math.max(0.5, scale - 0.1))}
-            disabled={numPages === 0}
-            className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            −
-          </button>
+        <div className="flex items-center gap-4">
+          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
+                  disabled={!numPages} className="px-3 py-1 bg-gray-700 text-white rounded text-sm">−</button>
           <span className="text-white text-sm">{Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale(Math.min(2.0, scale + 0.1))}
-            disabled={numPages === 0}
-            className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            +
-          </button>
+          <button onClick={() => setScale(s => Math.min(2, s + 0.1))}
+                  disabled={!numPages} className="px-3 py-1 bg-gray-700 text-white rounded text-sm">+</button>
           <button
             onClick={toggleFullscreen}
-            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm ml-2"
+            className="ml-2 px-3 py-1 bg-gray-700 text-white rounded text-sm"
           >
-            {isFullscreen ? '✕ Exit Fullscreen' : '⛶ Fullscreen'}
+            {isFullscreen ? '⤓ Exit' : '⤢ Fullscreen'}
           </button>
         </div>
       </div>
 
-      {/* PDF Viewer */}
+      {/* Viewer */}
       <div className="flex-1 overflow-auto bg-gray-900">
         <div className="w-full h-full flex justify-center p-4">
-          <div 
-            className="relative select-none"
-            onContextMenu={(e) => { e.preventDefault(); return false; }}
-            style={{ userSelect: 'none' }}
-          >
-            {/* Watermark Overlay - only show when page is ready */}
+          <div className="relative select-none" onContextMenu={e => e.preventDefault()} style={{ userSelect: 'none' }}>
+            {/* Watermark only after the page has rendered */}
             {pageReady && (
-              <div 
-                className="absolute inset-0 pointer-events-none flex items-center justify-center"
-                style={{ 
-                  background: 'repeating-linear-gradient(45deg, transparent, transparent 100px, rgba(239, 68, 68, 0.03) 100px, rgba(239, 68, 68, 0.03) 200px)',
-                  zIndex: 10
-                }}
-              >
-                <div className="text-red-500 opacity-10 text-6xl font-black transform -rotate-45 select-none">
-                  VIEW ONLY • NO DOWNLOAD
-                </div>
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                   style={{ background: 'repeating-linear-gradient(45deg,transparent,transparent 100px,rgba(239,68,68,.03) 100px,rgba(239,68,68,.03) 200px)', zIndex: 10 }}>
+                <div className="text-red-500 opacity-10 text-6xl font-black -rotate-45">VIEW ONLY • NO DOWNLOAD</div>
               </div>
             )}
 
-            {/* Only render Document when worker is ready */}
             <Document
               file={url}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              className="select-none"
+              onLoadSuccess={({ numPages }) => { setNumPages(numPages); setDocError(null); }}
+              onLoadError={(err) => { console.error('PDF load error', err); setDocError(err.message); }}
               options={{
                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                 cMapPacked: true,
-                disableAutoFetch: true, // Avoids range/partial fetch flakiness
-                disableStream: true, // Prevents early teardown on slow servers
+                // makes network behavior more predictable on slow origins
+                disableStream: true,
+                disableAutoFetch: true,
               }}
-              loading={<Loader text="Loading PDF..." />}
-              error={<Loader text="Loading PDF..." />}  // Hide default error banner
+              loading={<Loader text="Loading PDF…" />}
+              error={<Loader text="Loading PDF…" />}   // hide default red banner
               noData={<Loader text="No PDF to display" />}
             >
               {numPages > 0 && (
-                <div style={{ position: 'relative' }}>
-                  {/* Loader overlay - shows while page is rendering */}
-                  {!pageReady && (
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 20, backgroundColor: '#111827' }}>
-                      <Loader text="Rendering page..." />
-                    </div>
-                  )}
-                  
-                  {/* Key by pageNumber so each page change gets a fresh render task */}
+                <div className="relative">
                   <Page
-                    key={`page_${pageNumber}`}
+                    key={pageNumber}                 // ensures a fresh render task
                     pageNumber={pageNumber}
                     scale={scale}
-                    className="select-none"
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
                     onRenderSuccess={() => setPageReady(true)}
-                    onRenderError={(err) => {
-                      console.error('Page render error:', err);
+                    onRenderError={(e) => {
+                      console.error('Page render error', e);
                       setPageReady(false);
                     }}
-                    loading={null} // Let the outer loader handle it
-                    error={null} // Let the outer loader handle it
                   />
+                  {!pageReady && <Loader text="Rendering page…" />}  {/* overlay loader; don't hide Page */}
                 </div>
               )}
             </Document>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Loader({ text }: { text: string }) {
-  return (
-    <div className="text-white text-center py-8">
-      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
-      <p>{text}</p>
     </div>
   );
 }
