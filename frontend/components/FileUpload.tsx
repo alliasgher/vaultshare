@@ -20,6 +20,7 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
   const [maxViews, setMaxViews] = useState(10);
   const [disableDownload, setDisableDownload] = useState(false);
   const [error, setError] = useState('');
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -33,6 +34,10 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
     setError('');
     setUploading(true);
     setUploadProgress(0);
+
+    // Create abort controller for canceling upload
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
       const uploadedFile = await filesAPI.upload({
@@ -53,6 +58,12 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
       setMaxViews(10);
       setDisableDownload(false);
     } catch (err: unknown) {
+      // Check if upload was cancelled
+      if ((err as Error).name === 'CanceledError' || (err as Error).name === 'AbortError') {
+        setError('Upload cancelled');
+        return;
+      }
+
       const error = err as { response?: { data?: Record<string, unknown> } };
       // Try to get detailed error message
       const errorData = error?.response?.data;
@@ -79,7 +90,18 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
       setError(errorMessage);
     } finally {
       setUploading(false);
+      setAbortController(null);
       setTimeout(() => setUploadProgress(0), 1000);
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
+      setUploading(false);
+      setUploadProgress(0);
+      setAbortController(null);
+      setError('Upload cancelled');
     }
   };
 
@@ -223,16 +245,24 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
 
       {/* Upload Progress */}
       {uploading && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
-          <p className="text-sm text-gray-600 text-center">
-            Uploading... {uploadProgress}%
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Uploading... {uploadProgress}%
+            </p>
+            <button
+              onClick={handleCancel}
+              className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
