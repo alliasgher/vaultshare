@@ -146,7 +146,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
 
             {/* Only render Document when worker is ready */}
             <Document
-              key={url} // Forces clean re-init on URL change
               file={url}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
