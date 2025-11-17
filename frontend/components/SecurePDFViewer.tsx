@@ -22,6 +22,11 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [pageReady, setPageReady] = useState<boolean>(false);
   const documentRef = useRef<any>(null);
 
+  // Reset pageReady when page number changes
+  useEffect(() => {
+    setPageReady(false);
+  }, [pageNumber]);
+
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     console.log('PDF loaded successfully:', { numPages, url });
     setNumPages(numPages);
@@ -157,19 +162,23 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
               noData={<Loader text="No PDF to display" />}
             >
               {numPages > 0 && (
-                <Page
-                  key={`page_${pageNumber}`}
-                  pageNumber={pageNumber}
-                  scale={scale}
-                  className="select-none"
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  onRenderSuccess={() => setPageReady(true)}
-                  onRenderError={() => setPageReady(false)} // Don't show default banner
-                  loading={<Loader text="Rendering page..." />}
-                  error={<Loader text="Rendering page..." />} // Hide per-page error too
-                />
+                <div style={{ visibility: pageReady ? 'visible' : 'hidden' }}>
+                  <Page
+                    key={`page_${pageNumber}`}
+                    pageNumber={pageNumber}
+                    scale={scale}
+                    className="select-none"
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    onRenderSuccess={() => setPageReady(true)}
+                    onRenderError={() => setPageReady(false)} // Don't show default banner
+                    loading={<Loader text="Rendering page..." />}
+                    error={<Loader text="Rendering page..." />} // Hide per-page error too
+                  />
+                </div>
               )}
+              {/* Show loader when page is not ready */}
+              {numPages > 0 && !pageReady && <Loader text="Rendering page..." />}
             </Document>
           </div>
         </div>
