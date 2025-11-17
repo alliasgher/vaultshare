@@ -20,17 +20,38 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadAttempts, setLoadAttempts] = useState<number>(0);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    console.log('PDF loaded successfully:', { numPages, url, attempts: loadAttempts + 1 });
     setNumPages(numPages);
     setError(null);
     setIsLoading(false);
   }
 
   function onDocumentLoadError(error: Error) {
-    console.error('PDF load error:', error);
-    setError(error.message);
-    setIsLoading(false);
+    console.error('PDF load error (attempt', loadAttempts + 1, '):', error);
+    console.error('PDF URL:', url);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // Retry once if first attempt fails
+    if (loadAttempts < 1) {
+      console.log('Retrying PDF load...');
+      setLoadAttempts(prev => prev + 1);
+      setIsLoading(true);
+      setError(null);
+      // Force re-render by setting a timeout
+      setTimeout(() => {
+        setIsLoading(true);
+      }, 100);
+    } else {
+      setError(error.message);
+      setIsLoading(false);
+    }
   }
 
   const toggleFullscreen = () => {
@@ -130,6 +151,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               className="select-none"
+              key={loadAttempts}
               options={{
                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                 cMapPacked: true,
@@ -139,17 +161,20 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                 <div className="text-white text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
                   <p>Loading PDF...</p>
+                  {loadAttempts > 0 && <p className="text-sm text-gray-400 mt-2">Retrying...</p>}
                 </div>
               }
               error={
                 <div className="text-red-400 text-center py-12">
                   <p className="font-semibold mb-2">Failed to load PDF</p>
                   {error && <p className="text-sm text-gray-400">{error}</p>}
+                  <p className="text-xs text-gray-500 mt-2">Check browser console for details</p>
                 </div>
               }
             >
               {!isLoading && !error && (
                 <Page
+                  key={`page_${pageNumber}`}
                   pageNumber={pageNumber}
                   scale={scale}
                   className="select-none"
@@ -157,6 +182,11 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                   renderAnnotationLayer={false}
                   width={undefined}
                   height={undefined}
+                  loading={
+                    <div className="text-white text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  }
                 />
               )}
             </Document>
