@@ -1,8 +1,9 @@
 """
-Production settings for VaultShare (AWS Lambda)
+Production settings for VaultShare (Render/Railway)
 """
 
 from .base import *
+import dj_database_url
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -10,20 +11,14 @@ DEBUG = False
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
-# Database - PostgreSQL (Neon.tech)
+# Database - PostgreSQL (uses DATABASE_URL from Render/Neon)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
-        'CONN_MAX_AGE': 0,  # Important for Lambda
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=True,
+    )
 }
 
 # Security settings
@@ -41,6 +36,10 @@ SECURE_HSTS_PRELOAD = True
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
+# Static files - WhiteNoise for serving on Render
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Sentry integration
 if SENTRY_DSN:
     sentry_sdk.init(
@@ -51,9 +50,9 @@ if SENTRY_DSN:
         environment='production',
     )
 
-# Static files with S3
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-AWS_STATIC_LOCATION = 'static'
+# Remove static files S3 storage - using WhiteNoise instead
+# STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# AWS_STATIC_LOCATION = 'static'
 
 # Logging
 LOGGING = {

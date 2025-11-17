@@ -3,18 +3,29 @@ Development settings for VaultShare
 """
 
 from .base import *
+import dj_database_url
 
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-# Database - SQLite for local development (no setup required!)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR.parent / 'db.sqlite3',
+# Database - Use DATABASE_URL if set (for testing Neon), otherwise SQLite
+DATABASE_URL_ENV = os.getenv('DATABASE_URL')
+if DATABASE_URL_ENV and DATABASE_URL_ENV.startswith('postgresql'):
+    # Use PostgreSQL (Neon) if DATABASE_URL is set
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL_ENV)
     }
-}
+    print("✅ Using PostgreSQL (Neon) database")
+else:
+    # Default to SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR.parent / 'db.sqlite3',
+        }
+    }
+    print("✅ Using SQLite database")
 
 # Disable Redis/Caching for local development
 CACHES = {
