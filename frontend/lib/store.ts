@@ -40,20 +40,23 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
 
       logout: () => {
-        // Clear localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          
-          // Redirect to login page
-          window.location.href = '/login';
-        }
+        // Clear state
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
         });
+        
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.clear();
+          
+          // Redirect to login page
+          setTimeout(() => {
+            window.location.replace('/login');
+          }, 100);
+        }
       },
     }),
     {

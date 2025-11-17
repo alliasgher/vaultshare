@@ -18,6 +18,9 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
+// Flag to prevent multiple simultaneous logout redirects
+let isLoggingOut = false;
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
@@ -50,10 +53,16 @@ api.interceptors.response.use(
     const isAuthEndpoint = originalRequest?.url?.includes('/users/login/') || 
                           originalRequest?.url?.includes('/users/register/') ||
                           originalRequest?.url?.includes('/auth/login/') ||
-                          originalRequest?.url?.includes('/auth/register/');
+                          originalRequest?.url?.includes('/auth/register/') ||
+                          originalRequest?.url?.includes('/token/refresh/');
 
     // If 401 and not already retrying, try to refresh token or logout
     if (error.response?.status === 401 && !isAuthEndpoint && typeof window !== 'undefined') {
+      // If already logging out, don't process more errors
+      if (isLoggingOut) {
+        return Promise.reject(error);
+      }
+
       const hadAccessToken = !!localStorage.getItem('access_token');
       
       // Only attempt refresh if user was actually logged in and not already retried
@@ -62,7 +71,9 @@ api.interceptors.response.use(
 
         try {
           const refreshToken = localStorage.getItem('refresh_token');
-          if (!refreshToken) throw new Error('No refresh token');
+          if (!refreshToken) {
+            throw new Error('No refresh token');
+          }
 
           const { data } = await axios.post<{ access: string }>(`${API_URL}/users/token/refresh/`, {
             refresh: refreshToken,
@@ -77,25 +88,33 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (refreshError) {
           // Session expired - clear everything and force redirect
-          console.log('Session expired - forcing logout');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.clear(); // Clear all localStorage
-          
-          // Force immediate redirect without waiting for state updates
-          window.location.replace('/login');
+          if (!isLoggingOut) {
+            isLoggingOut = true;
+            console.error('Session expired - logging out');
+            
+            localStorage.clear();
+            
+            // Force immediate redirect
+            setTimeout(() => {
+              window.location.replace('/login');
+            }, 100);
+          }
           
           return Promise.reject(new Error('Session expired'));
         }
       } else if (hadAccessToken) {
-        // Already retried and still 401, or no original request - force logout
-        console.log('Auth failed after retry - forcing logout');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.clear(); // Clear all localStorage
-        
-        // Force immediate redirect without waiting for state updates
-        window.location.replace('/login');
+        // Already retried and still 401 - force logout
+        if (!isLoggingOut) {
+          isLoggingOut = true;
+          console.error('Authentication failed - logging out');
+          
+          localStorage.clear();
+          
+          // Force immediate redirect
+          setTimeout(() => {
+            window.location.replace('/login');
+          }, 100);
+        }
         
         return Promise.reject(new Error('Session expired'));
       }
