@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authAPI } from '@/lib/api';
@@ -9,11 +9,24 @@ import { CloudArrowUpIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { isAuthenticated, setAuth } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Wait for hydration
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (hydrated && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [hydrated, isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +42,14 @@ export default function LoginPage() {
       const error = err as { response?: { data?: { error?: string; detail?: string } } };
       const errorMessage = error?.response?.data?.error || error?.response?.data?.detail || 'Login failed. Please check your credentials.';
       setError(errorMessage);
-    } finally {
-      setLoading(false);
+      setLoading(false); // Only set loading to false on error
     }
   };
+
+  // Don't render login form if already authenticated
+  if (!hydrated || isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
