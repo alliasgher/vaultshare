@@ -18,9 +18,16 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
+    setError(null);
+  }
+
+  function onDocumentLoadError(error: Error) {
+    console.error('PDF load error:', error);
+    setError(error.message);
   }
 
   const toggleFullscreen = () => {
@@ -112,7 +119,13 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
           <Document
             file={url}
             onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
             className="select-none"
+            options={{
+              cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+              cMapPacked: true,
+              standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+            }}
             loading={
               <div className="text-white text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
@@ -121,7 +134,8 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
             }
             error={
               <div className="text-red-400 text-center py-12">
-                <p>Failed to load PDF</p>
+                <p className="font-semibold mb-2">Failed to load PDF</p>
+                {error && <p className="text-sm text-gray-400">{error}</p>}
               </div>
             }
           >
