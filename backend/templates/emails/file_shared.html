@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Shared With You</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #9C27B0; color: white; padding: 20px; text-align: center; }
+        .content { background: #f9f9f9; padding: 20px; margin-top: 20px; }
+        .button { display: inline-block; padding: 12px 24px; background: #9C27B0; color: white; text-decoration: none; border-radius: 4px; margin: 10px 0; }
+        .info { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #9C27B0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📤 VaultShare</h1>
+        </div>
+        <div class="content">
+            <h2>Someone Shared a File With You!</h2>
+            <p><strong>{{ shared_by }}</strong> has shared a file with you via VaultShare.</p>
+            
+            <div class="info">
+                <p><strong>File:</strong> {{ filename }}</p>
+            </div>
+            
+            <div class="info">
+                <p><strong>Access the file:</strong></p>
+                <p><a href="{{ access_url }}" class="button">View File</a></p>
+                <p style="word-break: break-all; font-size: 12px;">{{ access_url }}</p>
+            </div>
+            
+            <div class="info">
+                <p><strong>⏰ Expires:</strong> {{ expires_at|date:"F d, Y at H:i" }} UTC</p>
+            </div>
+            
+            <p><strong>🔒 Security Notice:</strong></p>
+            <ul>
+                <li>This link is secure and temporary</li>
+                <li>Only open if you trust the sender</li>
+                <li>The file will be automatically deleted after expiration</li>
+            </ul>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from VaultShare. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

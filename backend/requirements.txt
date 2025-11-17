@@ -1,0 +1,28 @@
+# Django & DRF
+Django==5.0.1
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.3.1
+django-filter==23.5
+
+# Database
+psycopg2-binary==2.9.9
+
+# Storage - Firebase (FREE 5GB forever!)
+firebase-admin==6.3.0
+
+# Email - Brevo (FREE 300 emails/day)
+requests==2.31.0
+
+# Monitoring
+sentry-sdk==1.39.2
+
+# Production server (for local testing)
+gunicorn==21.2.0
+
+# Serverless deployment
+serverless-wsgi==3.0.3
+
+# Development tools (optional)
+ipython==8.19.0
+django-extensions==3.2.3

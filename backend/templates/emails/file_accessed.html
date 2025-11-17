@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Accessed</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2196F3; color: white; padding: 20px; text-align: center; }
+        .content { background: #f9f9f9; padding: 20px; margin-top: 20px; }
+        .info { background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #2196F3; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 VaultShare Alert</h1>
+        </div>
+        <div class="content">
+            <h2>File Accessed</h2>
+            <p>Your file <strong>{{ filename }}</strong> was {{ access_type }}ed.</p>
+            
+            <div class="info">
+                <p><strong>Access Details:</strong></p>
+                <ul>
+                    <li>Time: {{ timestamp|date:"F d, Y at H:i" }} UTC</li>
+                    <li>IP Address: {{ ip_address }}</li>
+                    <li>Action: {{ access_type|title }}</li>
+                </ul>
+            </div>
+            
+            <div class="info">
+                <p><strong>Status:</strong></p>
+                <p>Views remaining: <strong>{{ views_remaining }}</strong></p>
+            </div>
+            
+            <p>If you did not expect this access, please contact support immediately.</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from VaultShare. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>
