@@ -21,6 +21,26 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1
 // Flag to prevent multiple simultaneous logout redirects
 let isLoggingOut = false;
 
+// Reset logout flag (called after successful login)
+export const resetLogoutFlag = () => {
+  isLoggingOut = false;
+};
+
+// Force logout and redirect
+const forceLogout = () => {
+  if (isLoggingOut) return;
+  
+  isLoggingOut = true;
+  console.error('Force logout - clearing session and redirecting');
+  
+  // Clear all storage
+  localStorage.clear();
+  sessionStorage.clear();
+  
+  // Immediate redirect - no setTimeout
+  window.location.href = '/login';
+};
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
@@ -87,35 +107,13 @@ api.interceptors.response.use(
 
           return api(originalRequest);
         } catch (refreshError) {
-          // Session expired - clear everything and force redirect
-          if (!isLoggingOut) {
-            isLoggingOut = true;
-            console.error('Session expired - logging out');
-            
-            localStorage.clear();
-            
-            // Force immediate redirect
-            setTimeout(() => {
-              window.location.replace('/login');
-            }, 100);
-          }
-          
+          // Session expired - force logout
+          forceLogout();
           return Promise.reject(new Error('Session expired'));
         }
       } else if (hadAccessToken) {
         // Already retried and still 401 - force logout
-        if (!isLoggingOut) {
-          isLoggingOut = true;
-          console.error('Authentication failed - logging out');
-          
-          localStorage.clear();
-          
-          // Force immediate redirect
-          setTimeout(() => {
-            window.location.replace('/login');
-          }, 100);
-        }
-        
+        forceLogout();
         return Promise.reject(new Error('Session expired'));
       }
     }
@@ -130,6 +128,7 @@ export const authAPI = {
     // Backend returns user data, not tokens on registration
     await api.post('/users/', data);
     // Login after successful registration
+    resetLogoutFlag(); // Reset the flag on new login
     const loginResponse = await api.post<AuthTokens>('/auth/login/', {
       email: data.email,
       password: data.password,
@@ -138,6 +137,7 @@ export const authAPI = {
   },
 
   login: async (credentials: LoginCredentials): Promise<AuthTokens> => {
+    resetLogoutFlag(); // Reset the flag on new login
     const response = await api.post<AuthTokens>('/auth/login/', credentials);
     return response.data;
   },
