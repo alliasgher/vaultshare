@@ -20,38 +20,21 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [loadAttempts, setLoadAttempts] = useState<number>(0);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    console.log('PDF loaded successfully:', { numPages, url, attempts: loadAttempts + 1 });
+    console.log('PDF loaded successfully:', { numPages, url });
     setNumPages(numPages);
     setError(null);
     setIsLoading(false);
+    setHasLoadedOnce(true);
   }
 
   function onDocumentLoadError(error: Error) {
-    console.error('PDF load error (attempt', loadAttempts + 1, '):', error);
+    console.error('PDF load error:', error);
     console.error('PDF URL:', url);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
-    
-    // Retry once if first attempt fails
-    if (loadAttempts < 1) {
-      console.log('Retrying PDF load...');
-      setLoadAttempts(prev => prev + 1);
-      setIsLoading(true);
-      setError(null);
-      // Force re-render by setting a timeout
-      setTimeout(() => {
-        setIsLoading(true);
-      }, 100);
-    } else {
-      setError(error.message);
-      setIsLoading(false);
-    }
+    setError(error.message);
+    setIsLoading(false);
   }
 
   const toggleFullscreen = () => {
@@ -67,12 +50,19 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const wasFullscreen = isFullscreen;
+      const nowFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(nowFullscreen);
+      
+      // Reset scale when exiting fullscreen to prevent zoom issues
+      if (wasFullscreen && !nowFullscreen) {
+        setScale(1.0);
+      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+  }, [isFullscreen]);
 
   return (
     <div id="pdf-fullscreen-container" className="flex flex-col h-full bg-gray-900">
@@ -151,7 +141,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               className="select-none"
-              key={loadAttempts}
               options={{
                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                 cMapPacked: true,
@@ -161,15 +150,16 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                 <div className="text-white text-center py-12">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
                   <p>Loading PDF...</p>
-                  {loadAttempts > 0 && <p className="text-sm text-gray-400 mt-2">Retrying...</p>}
                 </div>
               }
               error={
-                <div className="text-red-400 text-center py-12">
-                  <p className="font-semibold mb-2">Failed to load PDF</p>
-                  {error && <p className="text-sm text-gray-400">{error}</p>}
-                  <p className="text-xs text-gray-500 mt-2">Check browser console for details</p>
-                </div>
+                hasLoadedOnce ? null : (
+                  <div className="text-red-400 text-center py-12">
+                    <p className="font-semibold mb-2">Failed to load PDF</p>
+                    {error && <p className="text-sm text-gray-400">{error}</p>}
+                    <p className="text-xs text-gray-500 mt-2">Check browser console for details</p>
+                  </div>
+                )
               }
             >
               {!isLoading && !error && (

@@ -1,0 +1,23 @@
+VaultShare - Fixes & Issues Tracker
+====================================
+
+PENDING
+-------
+inaccurate views tracking
+ability to take screenshot
+PDF viewer shows "Failed to load PDF" flash before loading successfully
+PDF viewer zooms out incorrectly when exiting fullscreen mode
+
+IN PROGRESS
+-----------
+
+
+COMPLETED
+---------
+
+
+NOTES
+-----
+- Add new items above in the appropriate section
+- Use format: "Number. Title - Description - Priority: Low/Medium/High"
+- Move items between sections as status changes
