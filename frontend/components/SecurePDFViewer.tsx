@@ -18,17 +18,9 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // ✅ load the matching worker dynamically
+  // Set worker once on mount
   useEffect(() => {
-    (async () => {
-      try {
-        const pdfjsLib = await import('pdfjs-dist/build/pdf');
-        const worker = await import('pdfjs-dist/build/pdf.worker.mjs?url');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = worker.default;
-      } catch (err) {
-        console.error('PDF worker load error:', err);
-      }
-    })();
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
   }, []);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
