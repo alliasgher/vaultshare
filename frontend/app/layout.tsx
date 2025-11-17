@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import PDFWorkerInit from "@/components/PDFWorkerInit";
+import dynamic from "next/dynamic";
 import "./globals.css";
+
+// Dynamically import PDFWorkerInit with SSR disabled
+const PDFWorkerInit = dynamic(() => import("@/components/PDFWorkerInit"), {
+  ssr: false,
+});
 
 const inter = Inter({
   subsets: ["latin"],
