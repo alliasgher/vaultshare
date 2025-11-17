@@ -70,12 +70,10 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - logout
+        // Refresh failed - clear tokens and let app handle redirect via auth state
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        // Don't force redirect here - let the app's auth state management handle it
         return Promise.reject(refreshError);
       }
     }

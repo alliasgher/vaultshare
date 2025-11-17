@@ -16,17 +16,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // Wait for hydration
+  // Check authentication only once on mount
   useEffect(() => {
     setHydrated(true);
-  }, []);
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (hydrated && isAuthenticated) {
+    // If already authenticated when page loads, redirect
+    if (useAuthStore.getState().isAuthenticated) {
       router.push('/dashboard');
     }
-  }, [hydrated, isAuthenticated, router]);
+  }, []); // Empty deps - only run once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
