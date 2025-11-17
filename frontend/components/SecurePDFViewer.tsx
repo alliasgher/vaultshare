@@ -5,8 +5,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Worker is configured globally in PDFWorkerInit component
-// No need to configure it here - just use pdfjs.version for other resources
+// Use CDN with exact version from installed pdfjs-dist package
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface SecurePDFViewerProps {
   url: string;
@@ -20,7 +20,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
   const documentRef = useRef<any>(null);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
@@ -28,7 +27,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
     setNumPages(numPages);
     setError(null);
     setIsLoading(false);
-    setHasLoadedOnce(true);
   }
 
   function onDocumentLoadError(error: Error) {
@@ -145,6 +143,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
 
             {/* Only render Document when worker is ready */}
             <Document
+              key={url} // Forces clean re-init on URL change
               file={url}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
@@ -152,7 +151,8 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
               options={{
                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                 cMapPacked: true,
-                standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+                disableAutoFetch: true, // Avoids range/partial fetch flakiness
+                disableStream: true, // Prevents early teardown on slow servers
               }}
               loading={
                 <div className="text-white text-center py-12">
@@ -169,8 +169,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                   className="select-none"
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
-                  width={undefined}
-                  height={undefined}
                   loading={
                     <div className="text-white text-center py-8">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
