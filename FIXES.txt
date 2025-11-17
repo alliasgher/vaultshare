@@ -4,7 +4,6 @@ VaultShare - Fixes & Issues Tracker
 PENDING
 -------
 inaccurate views tracking
-ability to take screenshot
 PDF viewer shows "Failed to load PDF" flash before loading successfully
 PDF viewer zooms out incorrectly when exiting fullscreen mode
 
@@ -14,6 +13,7 @@ IN PROGRESS
 
 COMPLETED
 ---------
+ability to take screenshot - Implemented comprehensive screenshot prevention (keyboard shortcuts, context menu blocking, drag prevention)
 
 
 NOTES
