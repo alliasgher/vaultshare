@@ -1,13 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import { pdfjs } from 'react-pdf';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Keep worker and API versions matched
+// IMPORTANT: use the "legacy" worker path and keep versions matched
 pdfjs.GlobalWorkerOptions.workerSrc =
   `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+// Client-only versions of Document/Page to prevent SSR remounts
+const Document = dynamic(async () => (await import('react-pdf')).Document, { ssr: false });
+const Page = dynamic(async () => (await import('react-pdf')).Page, { ssr: false });
 
 function Loader({ text }: { text: string }) {
   return (
@@ -31,10 +37,23 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [pageReady, setPageReady] = useState(false);
-  const [docError, setDocError] = useState<string | null>(null);
+  const loadTokenRef = useRef(0);      // increments on page change to ignore stale callbacks
 
-  // reset ready flag when page changes
-  useEffect(() => { setPageReady(false); }, [pageNumber]);
+  // When page changes, mark not ready and bump token to invalidate old callbacks
+  useEffect(() => { 
+    setPageReady(false); 
+    loadTokenRef.current += 1; 
+  }, [pageNumber]);
+
+  const onDocLoad = (pdf: { numPages: number }) => {
+    setNumPages(pdf.numPages);
+    // clamp current page in case the new PDF has fewer pages
+    setPageNumber(p => Math.min(Math.max(1, p), pdf.numPages));
+  };
+
+  const onDocError = (e: any) => {
+    console.error('PDF load error', e);
+  };
 
   const toggleFullscreen = async () => {
     const container = document.getElementById('pdf-fullscreen-container');
@@ -69,13 +88,26 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, [isFullscreen]);
 
+  // Defensive navigation - clamp to valid page numbers
+  const goToPrevPage = () => {
+    if (numPages > 0) {
+      setPageNumber(p => Math.max(1, p - 1));
+    }
+  };
+
+  const goToNextPage = () => {
+    if (numPages > 0) {
+      setPageNumber(p => Math.min(numPages, p + 1));
+    }
+  };
+
   return (
     <div id="pdf-fullscreen-container" className="flex flex-col h-full bg-gray-900">
       {/* Controls */}
       <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-b border-gray-700">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+            onClick={goToPrevPage}
             disabled={pageNumber <= 1 || numPages === 0}
             className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 text-sm"
           >←</button>
@@ -83,7 +115,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
             {numPages ? `Page ${pageNumber} of ${numPages}` : 'Loading…'}
           </span>
           <button
-            onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
+            onClick={goToNextPage}
             disabled={pageNumber >= numPages || numPages === 0}
             className="px-3 py-1 bg-gray-700 text-white rounded disabled:opacity-50 text-sm"
           >→</button>
@@ -117,8 +149,8 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
 
             <Document
               file={url}
-              onLoadSuccess={({ numPages }) => { setNumPages(numPages); setDocError(null); }}
-              onLoadError={(err) => { console.error('PDF load error', err); setDocError(err.message); }}
+              onLoadSuccess={onDocLoad}
+              onLoadError={onDocError}
               options={{
                 cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
                 cMapPacked: true,
@@ -138,7 +170,13 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                     scale={scale}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
-                    onRenderSuccess={() => setPageReady(true)}
+                    onRenderSuccess={() => {
+                      // ignore late callbacks from a previous page
+                      const tokenAtStart = loadTokenRef.current;
+                      requestAnimationFrame(() => {
+                        if (tokenAtStart === loadTokenRef.current) setPageReady(true);
+                      });
+                    }}
                     onRenderError={(e) => {
                       console.error('Page render error', e);
                       setPageReady(false);
