@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -95,6 +95,14 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
     }
   };
 
+  // Memoize Document options to prevent unnecessary remounts
+  const documentOptions = useMemo(() => ({
+    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+    cMapPacked: true,
+    disableStream: true,
+    disableAutoFetch: true,
+  }), []);
+
   return (
     <div id="pdf-fullscreen-container" className="flex flex-col h-full bg-gray-900">
       {/* Controls */}
@@ -145,13 +153,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
               file={url}
               onLoadSuccess={onDocLoad}
               onLoadError={onDocError}
-              options={{
-                cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-                cMapPacked: true,
-                // makes network behavior more predictable on slow origins
-                disableStream: true,
-                disableAutoFetch: true,
-              }}
+              options={documentOptions}
               loading={<Loader text="Loading PDF…" />}
               error={<Loader text="Loading PDF…" />}   // hide default red banner
               noData={<Loader text="No PDF to display" />}
