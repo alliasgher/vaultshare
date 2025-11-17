@@ -46,35 +46,51 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // Don't intercept auth endpoints (login/register)
+    // Don't intercept auth endpoints (login/register) - let them handle their own errors
     const isAuthEndpoint = originalRequest?.url?.includes('/users/login/') || 
-                          originalRequest?.url?.includes('/users/register/');
+                          originalRequest?.url?.includes('/users/register/') ||
+                          originalRequest?.url?.includes('/auth/login/') ||
+                          originalRequest?.url?.includes('/auth/register/');
 
     // If 401 and not already retrying, try to refresh token
+    // Only do this if there was an access token (meaning user was logged in)
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
-      originalRequest._retry = true;
+      const hadAccessToken = !!localStorage.getItem('access_token');
+      
+      // Only attempt refresh if user was actually logged in
+      if (hadAccessToken) {
+        originalRequest._retry = true;
 
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) throw new Error('No refresh token');
+        try {
+          const refreshToken = localStorage.getItem('refresh_token');
+          if (!refreshToken) throw new Error('No refresh token');
 
-        const { data } = await axios.post<{ access: string }>(`${API_URL}/users/token/refresh/`, {
-          refresh: refreshToken,
-        });
+          const { data } = await axios.post<{ access: string }>(`${API_URL}/users/token/refresh/`, {
+            refresh: refreshToken,
+          });
 
-        localStorage.setItem('access_token', data.access);
-        
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${data.access}`;
+          localStorage.setItem('access_token', data.access);
+          
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${data.access}`;
+          }
+
+          return api(originalRequest);
+        } catch (refreshError) {
+          // Session expired - trigger logout
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            
+            // Trigger auth store logout
+            const { useAuthStore } = await import('@/lib/store');
+            useAuthStore.getState().logout();
+            
+            // Redirect to login
+            window.location.href = '/login';
+          }
+          return Promise.reject(refreshError);
         }
-
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed - clear tokens and let app handle redirect via auth state
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        // Don't force redirect here - let the app's auth state management handle it
-        return Promise.reject(refreshError);
       }
     }
 
