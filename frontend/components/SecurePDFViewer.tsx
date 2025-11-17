@@ -1,19 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import { pdfjs } from 'react-pdf';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// IMPORTANT: use the "legacy" worker path and keep versions matched
+// Keep worker and API versions matched
 pdfjs.GlobalWorkerOptions.workerSrc =
   `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
-// Client-only versions of Document/Page to prevent SSR remounts
-const Document = dynamic(async () => (await import('react-pdf')).Document, { ssr: false });
-const Page = dynamic(async () => (await import('react-pdf')).Page, { ssr: false });
 
 function Loader({ text }: { text: string }) {
   return (
