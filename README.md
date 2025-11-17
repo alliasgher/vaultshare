@@ -37,7 +37,7 @@ A production-ready, FREE file-sharing platform built with Django + Next.js, feat
 - **Frontend**: Next.js 15 + TypeScript + Tailwind CSS
 - **Authentication**: JWT (SimpleJWT)
 - **Database**: SQLite (dev) / PostgreSQL (prod - Neon.tech free tier)
-- **Storage**: Local (dev) / Firebase Storage (prod - 5GB free)
+- **Storage**: Local (dev) / Cloudflare R2 (prod - 10GB free + unlimited egress)
 - **Email**: Brevo API (300 emails/day free)
 - **Hosting**: Vercel (frontend) + Render/Railway (backend)
 
@@ -47,6 +47,7 @@ A production-ready, FREE file-sharing platform built with Django + Next.js, feat
 - ✅ **Modern** - Latest tech (Django 5, Next.js 15)
 - ✅ **Scalable** - Can grow to millions of users
 - ✅ **Secure** - Backend proxy ensures 100% accurate tracking
+- ✅ **Better free tier** - R2 has 10GB + unlimited egress (vs Firebase 5GB + limits)
 
 ### Project Structure
 ```
@@ -153,7 +154,7 @@ Frontend runs at: http://localhost:3000
 Frontend: Vercel (FREE)
 Backend: Render (FREE with 30s cold starts)
 Database: Neon.tech PostgreSQL (FREE 512MB)
-Storage: Firebase (FREE 5GB + 30GB downloads/month)
+Storage: Cloudflare R2 (FREE 10GB + unlimited egress)
 Email: Brevo (FREE 300 emails/day)
 
 Total: $0/month
@@ -164,14 +165,14 @@ Total: $0/month
 Frontend: Vercel (FREE)
 Backend: Railway ($5/month - always awake)
 Database: Neon.tech PostgreSQL (FREE 512MB)
-Storage: Firebase (FREE 5GB)
+Storage: Cloudflare R2 (FREE 10GB)
 Email: Brevo (FREE 300 emails/day)
 
 Total: $5/month
 ```
 
 **Free tier limits (very generous):**
-- Firebase: 5 GB storage + 30 GB downloads/month
+- Cloudflare R2: 10 GB storage + unlimited downloads
 - Brevo: 300 emails/day (9,000/month)
 - Neon: 512 MB database
 - Vercel: Unlimited builds/deploys
@@ -195,7 +196,13 @@ DEBUG=True
 DATABASE_URL=postgresql://user:pass@localhost/vaultshare
 
 # Storage (defaults to local filesystem)
-STORAGE_BACKEND=local  # or 'firebase' for production
+STORAGE_BACKEND=local  # or 'r2' or 'firebase' for production
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key
+R2_SECRET_ACCESS_KEY=your-secret-key
+R2_BUCKET_NAME=vaultshare
+
+# Or use Firebase (alternative)
 FIREBASE_CREDENTIALS_PATH=/path/to/firebase-credentials.json
 FIREBASE_STORAGE_BUCKET=your-bucket-name
 
@@ -212,10 +219,11 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## 📚 Documentation
 
 - **[TECH_STACK.md](./TECH_STACK.md)** - Complete tech stack overview & deployment options
-- **[FIREBASE_QUICKSTART.md](./FIREBASE_QUICKSTART.md)** - 5-minute Firebase setup (optional)
+- **[R2_QUICKSTART.md](./R2_QUICKSTART.md)** - 3-minute Cloudflare R2 setup (recommended!)
+- **[FIREBASE_QUICKSTART.md](./FIREBASE_QUICKSTART.md)** - 5-minute Firebase setup (alternative)
 - **[BREVO_SETUP.md](./BREVO_SETUP.md)** - 3-minute email setup (optional)
 
-**Note:** Firebase and Brevo are OPTIONAL for local development. Everything works without them!
+**Note:** R2 and Brevo are OPTIONAL for local development. Everything works without them!
 
 ---
 
@@ -232,8 +240,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
    - Connect GitHub
    - Add environment variables
    - Deploy
-4. **Setup Firebase** (optional, 5 min)
-   - Follow [FIREBASE_QUICKSTART.md](./FIREBASE_QUICKSTART.md)
+4. **Setup Cloudflare R2** (recommended, 3 min)
+   - Follow [R2_QUICKSTART.md](./R2_QUICKSTART.md)
 5. **Setup Brevo** (optional, 3 min)
    - Follow [BREVO_SETUP.md](./BREVO_SETUP.md)
 
@@ -262,11 +270,12 @@ Done! You have a production app running for $0-5/month.
 - ✅ Can detect screenshot tools/headless browsers
 - ✅ Prevents direct URL sharing
 
-### Why Firebase over S3?
-- ✅ More generous free tier (5 GB vs  none)
-- ✅ Simpler authentication
-- ✅ Never expires (AWS free tier is 12 months only)
+### Why R2 over S3/Firebase?
+- ✅ More generous free tier (10 GB vs 5 GB)
+- ✅ **Unlimited FREE egress** (downloads don't count!)
 - ✅ No credit card required
+- ✅ S3-compatible (easy migration)
+- ✅ Never expires (unlike AWS 12-month trial)
 
 ### Why No Redis/Celery?
 - ✅ Not needed for MVP (< 100 users)

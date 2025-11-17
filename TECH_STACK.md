@@ -7,7 +7,7 @@
 - **Django REST Framework** - API
 - **SQLite** - Database (development)
 - **PostgreSQL** - Database (production via Neon.tech)
-- **Firebase Storage** - File storage (5GB FREE)
+- **Cloudflare R2** - File storage (10GB FREE)
 - **Python 3.12** - Language
 
 ### Frontend  
@@ -39,7 +39,7 @@
 Frontend: Vercel (FREE)
 Backend: Render (FREE with cold starts)
 Database: Neon.tech (FREE 512MB)
-Storage: Firebase (FREE 5GB)
+Storage: Cloudflare R2 (FREE 10GB + unlimited egress)
 Email: Brevo (FREE 300/day)
 
 Total: $0/month
@@ -50,7 +50,7 @@ Total: $0/month
 Frontend: Vercel (FREE)
 Backend: Railway ($5/month)
 Database: Neon.tech (FREE 512MB)
-Storage: Firebase (FREE 5GB)
+Storage: Cloudflare R2 (FREE 10GB)
 Email: Brevo (FREE 300/day)
 
 Total: $5/month
@@ -121,19 +121,19 @@ Storage: media/uploads/{user_id}/{filename}
 Cost: $0 (uses your disk)
 ```
 
-### Production (Firebase)
+### Production (Cloudflare R2)
 ```
-Storage: Firebase Storage
+Storage: Cloudflare R2
 Path: uploads/{user_id}/{date}/{uuid}.ext
-Cost: FREE (5GB + 30GB downloads/month)
+Cost: FREE (10GB + unlimited egress)
 ```
 
-**Why Firebase?**
-- ✅ FREE 5GB storage (forever)
-- ✅ FREE 1GB/day downloads
-- ✅ Global CDN included
+**Why R2?**
+- ✅ FREE 10GB storage (vs Firebase 5GB)
+- ✅ FREE unlimited downloads (vs Firebase 1GB/day limit)
 - ✅ No credit card required
-- ✅ Never expires (unlike AWS 12-month trial)
+- ✅ S3-compatible API
+- ✅ Better free tier than AWS/Firebase
 
 ---
 

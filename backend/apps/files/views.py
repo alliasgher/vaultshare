@@ -20,6 +20,7 @@ from .serializers import (
     FileShareSerializer
 )
 from .firebase_storage import FirebaseStorageManager, generate_firebase_path
+from .r2_storage import R2StorageManager, generate_r2_path
 from core.utils import generate_file_hash
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,36 @@ class FileUploadViewSet(viewsets.ModelViewSet):
                 s3_key=firebase_path,  # Store Firebase path
                 s3_bucket='firebase'
             )
+        
+        # Cloudflare R2 Storage (FREE - 10 GB + unlimited egress!)
+        elif storage_backend == 'r2':
+            r2_path = generate_r2_path(user.id, uploaded_file.name)
+            
+            try:
+                r2_manager = R2StorageManager()
+                r2_manager.upload_file(
+                    uploaded_file,
+                    r2_path,
+                    content_type=uploaded_file.content_type
+                )
+                
+                file_upload = serializer.save(
+                    user=user,
+                    filename=uploaded_file.name,
+                    original_filename=uploaded_file.name,
+                    file_size=uploaded_file.size,
+                    file_hash=file_hash,
+                    content_type=uploaded_file.content_type or 'application/octet-stream',
+                    s3_key=r2_path,  # Store R2 path
+                    s3_bucket='r2'
+                )
+            except Exception as e:
+                logger.error(f"R2 upload failed: {str(e)}")
+                return Response(
+                    {'error': f'Failed to upload file to R2 Storage: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
         else:
             return Response(
                 {'error': f'Invalid storage backend: {storage_backend}'},
@@ -443,6 +474,57 @@ class FileAccessViewSet(viewsets.ViewSet):
                 send_access_notification(file_upload.id, method, self.get_client_ip(request))
                 
                 return response
+            
+            # Cloudflare R2 Storage
+            elif storage_type == 'r2':
+                try:
+                    r2_manager = R2StorageManager()
+                    file_content = r2_manager.download_file(file_upload.s3_key)
+                    
+                    # Create streaming response
+                    from django.http import StreamingHttpResponse
+                    import io
+                    
+                    response = StreamingHttpResponse(
+                        io.BytesIO(file_content),
+                        content_type=file_upload.content_type
+                    )
+                    
+                    if is_download:
+                        response['Content-Disposition'] = f'attachment; filename="{file_upload.original_filename}"'
+                    else:
+                        response['Content-Disposition'] = f'inline; filename="{file_upload.original_filename}"'
+                        # Allow embedding in iframes from your frontend domain
+                        frontend_domain = getattr(settings, 'VAULTSHARE', {}).get('FRONTEND_URL', 'http://localhost:3000')
+                        response['Content-Security-Policy'] = f"frame-ancestors 'self' {frontend_domain}"
+                        
+                        # Anti-screenshot headers
+                        response['X-Content-Type-Options'] = 'nosniff'
+                        response['X-Frame-Options'] = 'SAMEORIGIN'
+                        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+                        response['Pragma'] = 'no-cache'
+                        response['Expires'] = '0'
+                    
+                    response['Content-Length'] = len(file_content)
+                    
+                    # Only increment view counter when file is successfully served
+                    file_upload.increment_views()
+                    
+                    # Log successful access
+                    method = 'download' if is_download else 'view'
+                    self.create_access_log(file_upload, request, True, method=method)
+                    
+                    # Trigger email notification (async)
+                    from apps.notifications.tasks import send_access_notification
+                    send_access_notification(file_upload.id, method, self.get_client_ip(request))
+                    
+                    return response
+                    
+                except FileNotFoundError:
+                    return HttpResponse('File not found in R2 Storage', status=404)
+                except Exception as e:
+                    logger.error(f"R2 download failed: {str(e)}")
+                    return HttpResponse('Failed to retrieve file from R2 Storage', status=500)
                 
             # Unknown storage type
             else:

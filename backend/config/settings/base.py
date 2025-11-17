@@ -137,7 +137,27 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# AWS S3 Configuration
+# ============================================================================
+# STORAGE CONFIGURATION
+# ============================================================================
+
+# Storage Backend Selection
+# Options: 'local', 'firebase', 'r2'
+STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'local')
+
+# Cloudflare R2 Configuration (S3-compatible)
+# FREE: 10 GB storage + unlimited egress!
+R2_ACCOUNT_ID = os.getenv('R2_ACCOUNT_ID')
+R2_ACCESS_KEY_ID = os.getenv('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = os.getenv('R2_SECRET_ACCESS_KEY')
+R2_BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
+
+# Firebase Storage Configuration (alternative)
+# FREE: 5 GB storage + 1 GB/day downloads
+FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH')
+FIREBASE_STORAGE_BUCKET = os.getenv('FIREBASE_STORAGE_BUCKET')
+
+# AWS S3 Configuration (legacy, not recommended - use R2 instead)
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
