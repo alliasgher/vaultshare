@@ -19,21 +19,19 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [scale, setScale] = useState<number>(1.0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [pageReady, setPageReady] = useState<boolean>(false);
   const documentRef = useRef<any>(null);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     console.log('PDF loaded successfully:', { numPages, url });
     setNumPages(numPages);
     setError(null);
-    setIsLoading(false);
   }
 
   function onDocumentLoadError(error: Error) {
     console.error('PDF load error:', error);
     console.error('PDF URL:', url);
     setError(error.message);
-    setIsLoading(false);
   }
 
   const toggleFullscreen = async () => {
@@ -126,8 +124,8 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
             onContextMenu={(e) => { e.preventDefault(); return false; }}
             style={{ userSelect: 'none' }}
           >
-            {/* Watermark Overlay */}
-            {!isLoading && !error && (
+            {/* Watermark Overlay - only show when page is ready */}
+            {pageReady && (
               <div 
                 className="absolute inset-0 pointer-events-none flex items-center justify-center"
                 style={{ 
@@ -154,12 +152,9 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                 disableAutoFetch: true, // Avoids range/partial fetch flakiness
                 disableStream: true, // Prevents early teardown on slow servers
               }}
-              loading={
-                <div className="text-white text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
-                  <p>Loading PDF...</p>
-                </div>
-              }
+              loading={<Loader text="Loading PDF..." />}
+              error={<Loader text="Loading PDF..." />}  // Hide default error banner
+              noData={<Loader text="No PDF to display" />}
             >
               {numPages > 0 && (
                 <Page
@@ -169,17 +164,25 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                   className="select-none"
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
-                  loading={
-                    <div className="text-white text-center py-8">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                    </div>
-                  }
+                  onRenderSuccess={() => setPageReady(true)}
+                  onRenderError={() => setPageReady(false)} // Don't show default banner
+                  loading={<Loader text="Rendering page..." />}
+                  error={<Loader text="Rendering page..." />} // Hide per-page error too
                 />
               )}
             </Document>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Loader({ text }: { text: string }) {
+  return (
+    <div className="text-white text-center py-8">
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+      <p>{text}</p>
     </div>
   );
 }
