@@ -152,7 +152,7 @@ export const filesAPI = {
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/files/${id}/delete/`);
+    await api.delete(`/files/${id}/`);
   },
 
   getAccessLogs: async (id: string): Promise<AccessLog[]> => {
