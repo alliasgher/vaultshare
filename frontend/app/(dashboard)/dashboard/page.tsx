@@ -249,65 +249,144 @@ export default function DashboardPage() {
               {loadingLogs ? (
                 <p className="text-gray-600 dark:text-gray-400">Loading analytics...</p>
               ) : accessLogs.length === 0 ? (
-                <p className="text-gray-600 dark:text-gray-400">No access logs yet.</p>
+                <p className="text-gray-600 dark:text-gray-400">No access attempts recorded yet.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-4 py-3">Time</th>
-                        <th className="px-4 py-3">IP Address</th>
-                        <th className="px-4 py-3">Method</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Browser</th>
-                        <th className="px-4 py-3">Location</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {accessLogs.map((log) => (
-                        <tr key={log.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">
-                            {formatRelativeTime(log.created_at)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
-                            {log.ip_address || 'N/A'}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              log.access_method === 'view' 
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            }`}>
-                              {log.access_method}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {log.access_granted ? (
-                              <span className="text-green-600 dark:text-green-400 flex items-center">
-                                <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                Granted
-                              </span>
-                            ) : (
-                              <span className="text-red-600 dark:text-red-400 flex items-center">
-                                <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
-                                {log.failure_reason || 'Denied'}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400 text-xs truncate max-w-xs">
-                            {log.user_agent || 'N/A'}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                            {log.city && log.country ? `${log.city}, ${log.country}` : log.country || 'N/A'}
-                          </td>
+                <div className="space-y-4">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-4 gap-4 mb-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {accessLogs.filter(log => log.access_granted).length}
+                      </div>
+                      <div className="text-sm text-blue-800 dark:text-blue-300">Successful</div>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                        {accessLogs.filter(log => !log.access_granted).length}
+                      </div>
+                      <div className="text-sm text-red-800 dark:text-red-300">Blocked</div>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {accessLogs.filter(log => log.access_method === 'download' && log.access_granted).length}
+                      </div>
+                      <div className="text-sm text-green-800 dark:text-green-300">Downloads</div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {new Set(accessLogs.map(log => log.ip_address)).size}
+                      </div>
+                      <div className="text-sm text-purple-800 dark:text-purple-300">Unique IPs</div>
+                    </div>
+                  </div>
+
+                  {/* Access Log Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Time</th>
+                          <th className="px-4 py-3 text-left">Action</th>
+                          <th className="px-4 py-3 text-left">Status</th>
+                          <th className="px-4 py-3 text-left">IP Address</th>
+                          <th className="px-4 py-3 text-left">Location</th>
+                          <th className="px-4 py-3 text-left">Device</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {accessLogs.map((log) => {
+                          // Parse user agent for better display
+                          const ua = log.user_agent || '';
+                          let browser = 'Unknown';
+                          let os = 'Unknown';
+                          
+                          if (ua.includes('Chrome')) browser = 'Chrome';
+                          else if (ua.includes('Firefox')) browser = 'Firefox';
+                          else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+                          else if (ua.includes('Edge')) browser = 'Edge';
+                          
+                          if (ua.includes('Windows')) os = 'Windows';
+                          else if (ua.includes('Mac')) os = 'macOS';
+                          else if (ua.includes('Linux')) os = 'Linux';
+                          else if (ua.includes('Android')) os = 'Android';
+                          else if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+
+                          // Determine action description
+                          let actionText = '';
+                          let actionColor = '';
+                          
+                          if (log.access_granted && log.access_method === 'view') {
+                            actionText = '👁️ Viewed file';
+                            actionColor = 'text-blue-700 dark:text-blue-300';
+                          } else if (log.access_granted && log.access_method === 'download') {
+                            actionText = '⬇️ Downloaded file';
+                            actionColor = 'text-green-700 dark:text-green-300';
+                          } else if (!log.access_granted) {
+                            actionText = `🚫 Access denied`;
+                            actionColor = 'text-red-700 dark:text-red-300';
+                          } else {
+                            actionText = '✓ Validated access';
+                            actionColor = 'text-gray-700 dark:text-gray-300';
+                          }
+
+                          // Failure reason descriptions
+                          const failureReasons: Record<string, string> = {
+                            'deleted': 'File deleted',
+                            'inactive': 'File inactive',
+                            'expired': 'File expired',
+                            'view_limit': 'View limit reached',
+                            'wrong_password': 'Wrong password',
+                          };
+
+                          return (
+                            <tr key={log.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                              <td className="px-4 py-3 text-gray-900 dark:text-white whitespace-nowrap">
+                                <div className="font-medium">{formatRelativeTime(log.created_at)}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {new Date(log.created_at).toLocaleString()}
+                                </div>
+                              </td>
+                              <td className={`px-4 py-3 font-medium ${actionColor}`}>
+                                {actionText}
+                              </td>
+                              <td className="px-4 py-3">
+                                {log.access_granted ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                    <svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    Success
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                    <svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                    {failureReasons[log.failure_reason || ''] || log.failure_reason || 'Blocked'}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
+                                {log.ip_address || 'Unknown'}
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                {log.city && log.country ? (
+                                  <div>
+                                    <div>{log.city}</div>
+                                    <div className="text-xs text-gray-500">{log.country}</div>
+                                  </div>
+                                ) : log.country || 'Unknown'}
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                <div className="font-medium">{browser}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{os}</div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>

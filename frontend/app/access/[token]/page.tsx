@@ -142,6 +142,9 @@ export default function FileAccessPage() {
 
     autoValidate();
   }, [token]);
+  
+  // Note: Auto-validate on page load creates an access log entry.
+  // This is intentional for security tracking - every access validation is logged.
 
   const handleValidate = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -186,18 +189,8 @@ export default function FileAccessPage() {
         downloadFile(data.download_url, data.filename);
       }
       
-      // Refresh file data to update download count
-      setTimeout(async () => {
-        try {
-          const refreshedData = await publicAPI.validate({
-            access_token: token,
-            password: password || undefined,
-          });
-          setFileData(refreshedData);
-        } catch (err) {
-          console.error('Failed to refresh file data:', err);
-        }
-      }, 1500);
+      // Note: Download count will update on next page load or manual refresh
+      // Removed auto-refresh to avoid creating extra access log entries
     } catch (err: unknown) {
       const errorMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setError(errorMessage || 'Failed to download file.');
@@ -221,18 +214,8 @@ export default function FileAccessPage() {
       // Set the view URL to display inline
       setViewUrl(data.view_url || data.download_url || null);
       
-      // Refresh file data to update view count
-      setTimeout(async () => {
-        try {
-          const refreshedData = await publicAPI.validate({
-            access_token: token,
-            password: password || undefined,
-          });
-          setFileData(refreshedData);
-        } catch (err) {
-          console.error('Failed to refresh file data:', err);
-        }
-      }, 1500);
+      // Note: View count will update on next page load or manual refresh
+      // Removed auto-refresh to avoid creating extra access log entries
     } catch (err: unknown) {
       const errorMessage = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setError(errorMessage || 'Failed to view file.');
