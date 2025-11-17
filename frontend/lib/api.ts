@@ -76,27 +76,27 @@ api.interceptors.response.use(
 
           return api(originalRequest);
         } catch (refreshError) {
-          // Session expired - clear everything and redirect
+          // Session expired - clear everything and force redirect
+          console.log('Session expired - forcing logout');
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          localStorage.clear(); // Clear all localStorage
           
-          // Trigger auth store logout
-          const { useAuthStore } = await import('@/lib/store');
-          useAuthStore.getState().logout();
+          // Force immediate redirect without waiting for state updates
+          window.location.replace('/login');
           
-          // Redirect to login
-          window.location.href = '/login';
           return Promise.reject(new Error('Session expired'));
         }
       } else if (hadAccessToken) {
-        // Already retried and still 401, or no original request - logout
+        // Already retried and still 401, or no original request - force logout
+        console.log('Auth failed after retry - forcing logout');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.clear(); // Clear all localStorage
         
-        const { useAuthStore } = await import('@/lib/store');
-        useAuthStore.getState().logout();
+        // Force immediate redirect without waiting for state updates
+        window.location.replace('/login');
         
-        window.location.href = '/login';
         return Promise.reject(new Error('Session expired'));
       }
     }

@@ -44,6 +44,9 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          
+          // Redirect to login page
+          window.location.href = '/login';
         }
         set({
           user: null,
