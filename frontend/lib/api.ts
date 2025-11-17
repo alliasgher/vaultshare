@@ -52,13 +52,12 @@ api.interceptors.response.use(
                           originalRequest?.url?.includes('/auth/login/') ||
                           originalRequest?.url?.includes('/auth/register/');
 
-    // If 401 and not already retrying, try to refresh token
-    // Only do this if there was an access token (meaning user was logged in)
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
+    // If 401 and not already retrying, try to refresh token or logout
+    if (error.response?.status === 401 && !isAuthEndpoint && typeof window !== 'undefined') {
       const hadAccessToken = !!localStorage.getItem('access_token');
       
-      // Only attempt refresh if user was actually logged in
-      if (hadAccessToken) {
+      // Only attempt refresh if user was actually logged in and not already retried
+      if (hadAccessToken && originalRequest && !originalRequest._retry) {
         originalRequest._retry = true;
 
         try {
@@ -77,20 +76,28 @@ api.interceptors.response.use(
 
           return api(originalRequest);
         } catch (refreshError) {
-          // Session expired - trigger logout
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            
-            // Trigger auth store logout
-            const { useAuthStore } = await import('@/lib/store');
-            useAuthStore.getState().logout();
-            
-            // Redirect to login
-            window.location.href = '/login';
-          }
-          return Promise.reject(refreshError);
+          // Session expired - clear everything and redirect
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          
+          // Trigger auth store logout
+          const { useAuthStore } = await import('@/lib/store');
+          useAuthStore.getState().logout();
+          
+          // Redirect to login
+          window.location.href = '/login';
+          return Promise.reject(new Error('Session expired'));
         }
+      } else if (hadAccessToken) {
+        // Already retried and still 401, or no original request - logout
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        
+        const { useAuthStore } = await import('@/lib/store');
+        useAuthStore.getState().logout();
+        
+        window.location.href = '/login';
+        return Promise.reject(new Error('Session expired'));
       }
     }
 
