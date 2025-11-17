@@ -19,6 +19,8 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
   const [expiryHours, setExpiryHours] = useState(24);
   const [maxViews, setMaxViews] = useState(10);
   const [disableDownload, setDisableDownload] = useState(false);
+  const [requireSignin, setRequireSignin] = useState(false);
+  const [maxViewsPerConsumer, setMaxViewsPerConsumer] = useState(0);
   const [error, setError] = useState('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
@@ -46,6 +48,8 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
         expiry_hours: expiryHours,
         max_views: maxViews,
         disable_download: disableDownload,
+        require_signin: requireSignin,
+        max_views_per_consumer: maxViewsPerConsumer,
       });
 
       setUploadProgress(100);
@@ -57,6 +61,8 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
       setExpiryHours(24);
       setMaxViews(10);
       setDisableDownload(false);
+      setRequireSignin(false);
+      setMaxViewsPerConsumer(0);
     } catch (err: unknown) {
       // Check if upload was cancelled
       if ((err as Error).name === 'CanceledError' || (err as Error).name === 'AbortError') {
@@ -218,17 +224,55 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
             </div>
           </div>
 
-          <div className="flex items-center">
-            <input
-              id="disable-download"
-              type="checkbox"
-              checked={disableDownload}
-              onChange={(e) => setDisableDownload(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="disable-download" className="ml-2 block text-sm text-gray-700">
-              Disable download (view only)
-            </label>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center">
+              <input
+                id="disable-download"
+                type="checkbox"
+                checked={disableDownload}
+                onChange={(e) => setDisableDownload(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="disable-download" className="ml-2 block text-sm text-gray-700">
+                Disable download (view only)
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="require-signin"
+                type="checkbox"
+                checked={requireSignin}
+                onChange={(e) => setRequireSignin(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="require-signin" className="ml-2 block text-sm text-gray-700">
+                Require sign-in to access (consumers must log in)
+              </label>
+            </div>
+
+            {requireSignin && (
+              <div className="ml-6 mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max views per consumer (0 = unlimited per user)
+                </label>
+                <select
+                  value={maxViewsPerConsumer}
+                  onChange={(e) => setMaxViewsPerConsumer(Number(e.target.value))}
+                  className="w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value={0}>Unlimited per consumer</option>
+                  <option value={1}>1 view per consumer</option>
+                  <option value={2}>2 views per consumer</option>
+                  <option value={3}>3 views per consumer</option>
+                  <option value={5}>5 views per consumer</option>
+                  <option value={10}>10 views per consumer</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Each signed-in user can view the file up to this many times
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -41,6 +41,8 @@ export interface FileUpload {
   max_views: number;
   current_views: number;
   disable_download: boolean;
+  require_signin: boolean;
+  max_views_per_consumer: number;
   access_url: string;
   created_at: string;
 }
@@ -51,6 +53,8 @@ export interface FileUploadRequest {
   expiry_hours?: number;
   max_views?: number;
   disable_download?: boolean;
+  require_signin?: boolean;
+  max_views_per_consumer?: number;
 }
 
 export interface FileAccessRequest {
@@ -72,6 +76,8 @@ export interface FileAccessResponse {
     current_views: number;
     views_remaining: number;
     disable_download: boolean;
+    require_signin: boolean;
+    max_views_per_consumer: number;
     created_at: string;
   };
   password_required: boolean;
@@ -87,6 +93,7 @@ export interface FileDownloadResponse {
 
 export interface AccessLog {
   id: string;
+  consumer_email?: string;
   ip_address: string;
   user_agent: string;
   access_granted: boolean;

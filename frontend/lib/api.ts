@@ -164,6 +164,12 @@ export const filesAPI = {
     if (data.disable_download !== undefined) {
       formData.append('disable_download', data.disable_download.toString());
     }
+    if (data.require_signin !== undefined) {
+      formData.append('require_signin', data.require_signin.toString());
+    }
+    if (data.max_views_per_consumer !== undefined) {
+      formData.append('max_views_per_consumer', data.max_views_per_consumer.toString());
+    }
 
     const response = await api.post<FileUpload>('/files/', formData, {
       headers: {

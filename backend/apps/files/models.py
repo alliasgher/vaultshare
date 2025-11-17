@@ -49,6 +49,16 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
     max_views = models.IntegerField(default=10)
     current_views = models.IntegerField(default=0)
     
+    # Consumer access control
+    require_signin = models.BooleanField(
+        default=False,
+        help_text="Require consumers to sign in before accessing this file"
+    )
+    max_views_per_consumer = models.IntegerField(
+        default=0,
+        help_text="Maximum views allowed per consumer (0 = unlimited per consumer)"
+    )
+    
     # Download control
     disable_download = models.BooleanField(default=False)
     
@@ -97,6 +107,31 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
         self.current_views += 1
         self.save(update_fields=['current_views', 'updated_at'])
 
+    def get_consumer_view_count(self, consumer_id=None, ip_address=None):
+        """Get view count for a specific consumer"""
+        if consumer_id:
+            return self.access_logs.filter(
+                consumer_id=consumer_id,
+                access_granted=True,
+                access_method='view'
+            ).count()
+        elif ip_address:
+            return self.access_logs.filter(
+                ip_address=ip_address,
+                access_granted=True,
+                access_method='view',
+                consumer__isnull=True  # Only count anonymous views by IP
+            ).count()
+        return 0
+
+    def has_consumer_exceeded_limit(self, consumer_id=None, ip_address=None):
+        """Check if consumer has exceeded their view limit"""
+        if self.max_views_per_consumer == 0:
+            return False  # Unlimited views per consumer
+        
+        view_count = self.get_consumer_view_count(consumer_id, ip_address)
+        return view_count >= self.max_views_per_consumer
+
     def get_access_url(self):
         """Generate the access URL for this file"""
         from django.conf import settings
@@ -112,6 +147,16 @@ class AccessLog(TimeStampedModel):
         FileUpload,
         on_delete=models.CASCADE,
         related_name='access_logs'
+    )
+    
+    # Consumer tracking (for signed-in users)
+    consumer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='access_logs',
+        help_text="Consumer who accessed the file (if signed in)"
     )
     
     # Access information
