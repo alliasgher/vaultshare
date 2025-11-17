@@ -48,9 +48,9 @@ R2_BUCKET_NAME=vaultshare
 # Backend URL (will be: https://vaultshare-api.onrender.com)
 ALLOWED_HOSTS=vaultshare-api.onrender.com
 
-# Frontend URL (will set after Vercel deployment)
-CORS_ALLOWED_ORIGINS=https://vaultshare.vercel.app
-FRONTEND_URL=https://vaultshare.vercel.app
+# Frontend URL (update with your actual Vercel URL)
+CORS_ALLOWED_ORIGINS=https://vaultshare-lemon.vercel.app
+FRONTEND_URL=https://vaultshare-lemon.vercel.app
 ```
 
 **Optional Variables:**
