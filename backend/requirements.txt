@@ -5,10 +5,14 @@ djangorestframework-simplejwt==5.3.1
 django-cors-headers==4.3.1
 django-filter==23.5
 python-dotenv==1.0.0
+django-redis==5.4.0
 
 # Database
 psycopg2-binary==2.9.9
 dj-database-url==2.1.0
+
+# Storage
+django-storages==1.14.2
 
 # Storage - Cloudflare R2 (FREE 10GB + unlimited egress!)
 boto3==1.34.10

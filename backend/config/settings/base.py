@@ -224,11 +224,3 @@ VAULTSHARE = {
     'CLEANUP_BATCH_SIZE': 100,
     'FRONTEND_URL': os.getenv('FRONTEND_URL', 'http://localhost:3000'),
 }
-
-# Storage Backend: 'local' (dev) or 'firebase' (production - FREE!)
-STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'local')
-
-# Firebase Storage Configuration (FREE 5GB + 1GB/day downloads)
-FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH', '')
-FIREBASE_STORAGE_BUCKET = os.getenv('FIREBASE_STORAGE_BUCKET', '')
-
