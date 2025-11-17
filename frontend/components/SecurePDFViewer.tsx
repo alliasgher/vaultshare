@@ -103,8 +103,75 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
     disableAutoFetch: true,
   }), []);
 
+  // Screenshot prevention
+  useEffect(() => {
+    const preventScreenshot = (e: KeyboardEvent) => {
+      // Prevent PrintScreen key
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+        navigator.clipboard.writeText('Screenshot disabled for secure content');
+        alert('Screenshots are disabled for this secure document');
+      }
+
+      // Prevent common screenshot shortcuts
+      // Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5 (macOS)
+      // Win+PrintScreen, Win+Shift+S (Windows)
+      if (
+        (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)) ||
+        ((e.metaKey || e.key === 'Meta') && e.key === 'PrintScreen') ||
+        (e.metaKey && e.shiftKey && e.key.toLowerCase() === 's')
+      ) {
+        e.preventDefault();
+        alert('Screenshots are disabled for this secure document');
+      }
+    };
+
+    // Detect visibility changes (screenshot tools often minimize window)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.warn('Window hidden - possible screenshot attempt detected');
+      }
+    };
+
+    // Prevent browser screenshot extensions
+    const preventContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Add event listeners
+    document.addEventListener('keyup', preventScreenshot);
+    document.addEventListener('keydown', preventScreenshot);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    const container = document.getElementById('pdf-fullscreen-container');
+    if (container) {
+      container.addEventListener('contextmenu', preventContextMenu as any);
+      // Prevent drag and drop
+      container.addEventListener('dragstart', (e) => e.preventDefault());
+    }
+
+    return () => {
+      document.removeEventListener('keyup', preventScreenshot);
+      document.removeEventListener('keydown', preventScreenshot);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (container) {
+        container.removeEventListener('contextmenu', preventContextMenu as any);
+        container.removeEventListener('dragstart', (e) => e.preventDefault());
+      }
+    };
+  }, []);
+
   return (
-    <div id="pdf-fullscreen-container" className="flex flex-col h-full bg-gray-900">
+    <div 
+      id="pdf-fullscreen-container" 
+      className="flex flex-col h-full bg-gray-900"
+      style={{
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',
+      } as React.CSSProperties}
+    >
       {/* Controls */}
       <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-b border-gray-700">
         <div className="flex items-center gap-4">
@@ -140,7 +207,16 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
       {/* Viewer */}
       <div className="flex-1 overflow-auto bg-gray-900">
         <div className="w-full h-full flex justify-center p-4">
-          <div className="relative select-none" onContextMenu={e => e.preventDefault()} style={{ userSelect: 'none' }}>
+          <div 
+            className="relative select-none" 
+            onContextMenu={e => e.preventDefault()} 
+            style={{ 
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              MozUserSelect: 'none',
+              msUserSelect: 'none',
+            } as React.CSSProperties}
+          >
             {/* Watermark only after the page has rendered */}
             {pageReady && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center"
