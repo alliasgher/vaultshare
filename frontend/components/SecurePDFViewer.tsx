@@ -21,6 +21,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
+  const [pageLoading, setPageLoading] = useState<boolean>(false);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     console.log('PDF loaded successfully:', { numPages, url });
@@ -37,14 +38,20 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
     setIsLoading(false);
   }
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     const container = document.getElementById('pdf-fullscreen-container');
     if (!document.fullscreenElement && container) {
-      container.requestFullscreen();
-      setIsFullscreen(true);
+      try {
+        await container.requestFullscreen();
+      } catch (err) {
+        console.error('Fullscreen error:', err);
+      }
     } else if (document.fullscreenElement) {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+      try {
+        await document.exitFullscreen();
+      } catch (err) {
+        console.error('Exit fullscreen error:', err);
+      }
     }
   };
 
@@ -56,7 +63,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
       
       // Reset scale when exiting fullscreen to prevent zoom issues
       if (wasFullscreen && !nowFullscreen) {
-        setScale(1.0);
+        setTimeout(() => setScale(1.0), 100);
       }
     };
 
@@ -162,7 +169,7 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                 )
               }
             >
-              {!isLoading && !error && (
+              {numPages > 0 && (
                 <Page
                   key={`page_${pageNumber}`}
                   pageNumber={pageNumber}
@@ -172,9 +179,19 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                   renderAnnotationLayer={false}
                   width={undefined}
                   height={undefined}
+                  onLoadSuccess={() => setPageLoading(false)}
+                  onLoadError={(err) => {
+                    console.error('Page load error:', err);
+                    setPageLoading(false);
+                  }}
                   loading={
                     <div className="text-white text-center py-8">
                       <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  }
+                  error={
+                    <div className="text-red-400 text-center py-8">
+                      <p className="text-sm">Error loading page {pageNumber}</p>
                     </div>
                   }
                 />
