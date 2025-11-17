@@ -36,6 +36,17 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!hydrated) return; // Wait for hydration
     
+    // Verify tokens exist in localStorage (not just Zustand state)
+    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
+    
+    // If Zustand thinks we're authenticated but tokens are missing, force logout
+    if (isAuthenticated && (!accessToken || !refreshToken)) {
+      console.error('Auth state mismatch - tokens missing, forcing logout');
+      logout();
+      return;
+    }
+    
     if (!isAuthenticated) {
       router.push('/login');
       return;

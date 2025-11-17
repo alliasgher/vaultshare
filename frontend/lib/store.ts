@@ -17,7 +17,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
@@ -61,6 +61,22 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'vaultshare-auth',
+      onRehydrateStorage: () => (state) => {
+        // After hydration, verify tokens still exist in localStorage
+        if (typeof window !== 'undefined' && state?.isAuthenticated) {
+          const accessToken = localStorage.getItem('access_token');
+          const refreshToken = localStorage.getItem('refresh_token');
+          
+          // If state says authenticated but tokens are missing, clear state
+          if (!accessToken || !refreshToken) {
+            console.error('Auth state corrupted - tokens missing after hydration');
+            state.user = null;
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.isAuthenticated = false;
+          }
+        }
+      },
     }
   )
 );
