@@ -161,8 +161,17 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
               noData={<Loader text="No PDF to display" />}
             >
               {numPages > 0 && (
-                <div style={{ visibility: pageReady ? 'visible' : 'hidden', position: 'relative' }}>
+                <div style={{ position: 'relative' }}>
+                  {/* Loader overlay - shows while page is rendering */}
+                  {!pageReady && (
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 20, backgroundColor: '#111827' }}>
+                      <Loader text="Rendering page..." />
+                    </div>
+                  )}
+                  
+                  {/* Key by pageNumber so each page change gets a fresh render task */}
                   <Page
+                    key={`page_${pageNumber}`}
                     pageNumber={pageNumber}
                     scale={scale}
                     className="select-none"
@@ -176,12 +185,6 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
                     loading={null} // Let the outer loader handle it
                     error={null} // Let the outer loader handle it
                   />
-                </div>
-              )}
-              {/* Show loader when page is not ready */}
-              {numPages > 0 && !pageReady && (
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                  <Loader text="Rendering page..." />
                 </div>
               )}
             </Document>
