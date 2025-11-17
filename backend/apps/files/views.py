@@ -204,10 +204,11 @@ class FileAccessViewSet(viewsets.ViewSet):
             ip = request.META.get('REMOTE_ADDR')
         return ip
 
-    def create_access_log(self, file_upload, request, granted, method='view', reason=None):
+    def create_access_log(self, file_upload, request, granted, method='view', reason=None, consumer=None):
         """Create an access log entry"""
         AccessLog.objects.create(
             file=file_upload,
+            consumer=consumer,
             ip_address=self.get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             access_granted=granted,
@@ -235,7 +236,8 @@ class FileAccessViewSet(viewsets.ViewSet):
         
         # Check if file is deleted
         if file_upload.is_deleted:
-            self.create_access_log(file_upload, request, False, reason='deleted')
+            consumer = request.user if request.user.is_authenticated else None
+            self.create_access_log(file_upload, request, False, reason='deleted', consumer=consumer)
             return Response(
                 {'error': 'File has been deleted'},
                 status=status.HTTP_410_GONE
@@ -243,7 +245,8 @@ class FileAccessViewSet(viewsets.ViewSet):
         
         # Check if file is active
         if not file_upload.is_active:
-            self.create_access_log(file_upload, request, False, reason='inactive')
+            consumer = request.user if request.user.is_authenticated else None
+            self.create_access_log(file_upload, request, False, reason='inactive', consumer=consumer)
             return Response(
                 {'error': 'File is not active'},
                 status=status.HTTP_403_FORBIDDEN
@@ -251,7 +254,8 @@ class FileAccessViewSet(viewsets.ViewSet):
         
         # Check expiry
         if file_upload.is_expired():
-            self.create_access_log(file_upload, request, False, reason='expired')
+            consumer = request.user if request.user.is_authenticated else None
+            self.create_access_log(file_upload, request, False, reason='expired', consumer=consumer)
             return Response(
                 {'error': 'File has expired'},
                 status=status.HTTP_410_GONE
@@ -259,7 +263,8 @@ class FileAccessViewSet(viewsets.ViewSet):
         
         # Check view limit
         if file_upload.is_view_limit_reached():
-            self.create_access_log(file_upload, request, False, reason='view_limit')
+            consumer = request.user if request.user.is_authenticated else None
+            self.create_access_log(file_upload, request, False, reason='view_limit', consumer=consumer)
             return Response(
                 {'error': 'View limit reached'},
                 status=status.HTTP_403_FORBIDDEN
@@ -274,14 +279,33 @@ class FileAccessViewSet(viewsets.ViewSet):
                 )
             
             if not check_password(password, file_upload.password_hash):
-                self.create_access_log(file_upload, request, False, reason='wrong_password')
+                consumer = request.user if request.user.is_authenticated else None
+                self.create_access_log(file_upload, request, False, reason='wrong_password', consumer=consumer)
                 return Response(
                     {'error': 'Invalid password'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
         
+        # Check consumer access controls
+        if file_upload.require_signin:
+            if not request.user.is_authenticated:
+                self.create_access_log(file_upload, request, False, reason='signin_required')
+                return Response(
+                    {'error': 'You must be signed in to access this file'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            # Check if this consumer has exceeded their view limit
+            if file_upload.has_consumer_exceeded_limit(consumer_id=request.user.id):
+                self.create_access_log(file_upload, request, False, reason='consumer_limit_exceeded', consumer=request.user)
+                return Response(
+                    {'error': 'You have exceeded your view limit for this file'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
         # Access granted - return file details
-        self.create_access_log(file_upload, request, True)
+        consumer = request.user if request.user.is_authenticated else None
+        self.create_access_log(file_upload, request, True, consumer=consumer)
         
         return Response({
             'success': True,
@@ -383,6 +407,18 @@ class FileAccessViewSet(viewsets.ViewSet):
             if file_upload.current_views >= file_upload.max_views:
                 return HttpResponse('View limit reached', status=403)
             
+            # Check consumer access controls
+            if file_upload.require_signin:
+                if not request.user.is_authenticated:
+                    consumer = request.user if request.user.is_authenticated else None
+                    self.create_access_log(file_upload, request, False, reason='signin_required', consumer=consumer)
+                    return HttpResponse('You must be signed in to access this file', status=401)
+                
+                # Check if this consumer has exceeded their view limit
+                if file_upload.has_consumer_exceeded_limit(consumer_id=request.user.id):
+                    self.create_access_log(file_upload, request, False, reason='consumer_limit_exceeded', consumer=request.user)
+                    return HttpResponse('You have exceeded your view limit for this file', status=403)
+            
             # Determine if this is a download request
             is_download = request.GET.get('download', '').lower() == 'true'
             
@@ -390,7 +426,8 @@ class FileAccessViewSet(viewsets.ViewSet):
             user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
             if 'headless' in user_agent or 'phantom' in user_agent or 'selenium' in user_agent:
                 logger.warning(f"Potential screenshot attempt detected for file {file_upload.id} from {self.get_client_ip(request)}")
-                self.create_access_log(file_upload, request, False, method='screenshot_attempt')
+                consumer = request.user if request.user.is_authenticated else None
+                self.create_access_log(file_upload, request, False, method='screenshot_attempt', consumer=consumer)
             
             # Serve file based on storage backend
             storage_backend = getattr(settings, 'STORAGE_BACKEND', 'local')
@@ -422,7 +459,8 @@ class FileAccessViewSet(viewsets.ViewSet):
                     
                     # Log successful access
                     method = 'download' if is_download else 'view'
-                    self.create_access_log(file_upload, request, True, method=method)
+                    consumer = request.user if request.user.is_authenticated else None
+                    self.create_access_log(file_upload, request, True, method=method, consumer=consumer)
                     
                     return response
                 else:
@@ -467,7 +505,8 @@ class FileAccessViewSet(viewsets.ViewSet):
                 
                 # Log successful access
                 method = 'download' if is_download else 'view'
-                self.create_access_log(file_upload, request, True, method=method)
+                consumer = request.user if request.user.is_authenticated else None
+                self.create_access_log(file_upload, request, True, method=method, consumer=consumer)
                 
                 # Trigger email notification (async)
                 from apps.notifications.tasks import send_access_notification
@@ -512,7 +551,8 @@ class FileAccessViewSet(viewsets.ViewSet):
                     
                     # Log successful access
                     method = 'download' if is_download else 'view'
-                    self.create_access_log(file_upload, request, True, method=method)
+                    consumer = request.user if request.user.is_authenticated else None
+                    self.create_access_log(file_upload, request, True, method=method, consumer=consumer)
                     
                     # Trigger email notification (async)
                     from apps.notifications.tasks import send_access_notification
