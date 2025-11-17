@@ -5,9 +5,6 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure PDF.js worker - use public folder for reliable loading
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-
 interface SecurePDFViewerProps {
   url: string;
   filename: string;
@@ -22,6 +19,14 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
   const [pageLoading, setPageLoading] = useState<boolean>(false);
+
+  // Configure PDF.js worker dynamically to ensure version match
+  useEffect(() => {
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url
+    ).toString();
+  }, []);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     console.log('PDF loaded successfully:', { numPages, url });
