@@ -162,23 +162,29 @@ export default function SecurePDFViewer({ url, filename }: SecurePDFViewerProps)
               noData={<Loader text="No PDF to display" />}
             >
               {numPages > 0 && (
-                <div style={{ visibility: pageReady ? 'visible' : 'hidden' }}>
+                <div style={{ visibility: pageReady ? 'visible' : 'hidden', position: 'relative' }}>
                   <Page
-                    key={`page_${pageNumber}`}
                     pageNumber={pageNumber}
                     scale={scale}
                     className="select-none"
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
                     onRenderSuccess={() => setPageReady(true)}
-                    onRenderError={() => setPageReady(false)} // Don't show default banner
-                    loading={<Loader text="Rendering page..." />}
-                    error={<Loader text="Rendering page..." />} // Hide per-page error too
+                    onRenderError={(err) => {
+                      console.error('Page render error:', err);
+                      setPageReady(false);
+                    }}
+                    loading={null} // Let the outer loader handle it
+                    error={null} // Let the outer loader handle it
                   />
                 </div>
               )}
               {/* Show loader when page is not ready */}
-              {numPages > 0 && !pageReady && <Loader text="Rendering page..." />}
+              {numPages > 0 && !pageReady && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                  <Loader text="Rendering page..." />
+                </div>
+              )}
             </Document>
           </div>
         </div>
