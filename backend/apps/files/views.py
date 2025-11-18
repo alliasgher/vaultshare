@@ -186,8 +186,21 @@ class FileUploadViewSet(viewsets.ModelViewSet):
         Get access logs for a specific file.
         Shows session-grouped logs: if user viewed AND downloaded in same session,
         both entries are shown. But duplicate views/downloads in same session are deduplicated.
+        
+        Note: Analytics are accessible even for deleted files (soft-deleted files 
+        keep their database records and logs for historical tracking).
         """
-        file_upload = self.get_object()
+        # Get file including soft-deleted ones (for analytics history)
+        try:
+            file_upload = FileUpload.objects.get(
+                id=pk,
+                user=request.user  # Ensure user owns the file
+            )
+        except FileUpload.DoesNotExist:
+            return Response(
+                {'error': 'File not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Get session-grouped logs (shows both view and download if in same session)
         grouped_logs = file_upload.get_session_grouped_logs()
