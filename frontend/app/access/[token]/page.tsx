@@ -318,7 +318,9 @@ export default function FileAccessPage() {
                       <dd className="text-gray-900 font-medium">{fileData.file.content_type}</dd>
                     </div>
                     <div>
-                      <dt className="text-gray-500">Expires In</dt>
+                      <dt className="text-gray-500">
+                        {fileData.file.time_remaining === 'Expired' ? 'Status' : 'Expires In'}
+                      </dt>
                       <dd className="text-gray-900 font-medium">{fileData.file.time_remaining}</dd>
                     </div>
                   </dl>

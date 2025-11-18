@@ -215,7 +215,11 @@ export default function DashboardPage() {
                             {file.current_views}/{file.max_views} views
                           </span>
                           <span>•</span>
-                          <span>Expires in {getTimeRemaining(file.expires_at)}</span>
+                          <span>
+                            {getTimeRemaining(file.expires_at) === 'Expired' 
+                              ? 'Expired' 
+                              : `Expires in ${getTimeRemaining(file.expires_at)}`}
+                          </span>
                           <span>•</span>
                           <span>{formatRelativeTime(file.created_at)}</span>
                         </div>
