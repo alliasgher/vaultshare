@@ -21,7 +21,7 @@ class FileCleanupService:
     
     def cleanup_expired_files(self):
         """
-        Delete expired files from database and S3
+        Delete expired files from database and storage (R2/Firebase/Local)
         
         Files older than MAX_FILE_AGE_DAYS (30 days) are HARD DELETED (completely removed).
         Files that expired recently are SOFT DELETED (analytics preserved for ~30 days).
@@ -56,7 +56,7 @@ class FileCleanupService:
             'total_processed': 0,
             'hard_deleted': 0,
             'soft_deleted': 0,
-            'deleted_from_s3': 0,
+            'deleted_from_storage': 0,
             'failed': 0,
             'storage_freed': 0,
             'deleted_by_expiry': 0,
@@ -70,9 +70,9 @@ class FileCleanupService:
                 stats['total_processed'] += 1
                 stats['deleted_by_age'] += 1
                 
-                # Delete from S3
+                # Delete from storage (R2/Firebase/Local)
                 if self.s3_manager.delete_file(file_upload.s3_key):
-                    stats['deleted_from_s3'] += 1
+                    stats['deleted_from_storage'] += 1
                     stats['storage_freed'] += file_upload.file_size
                 
                 # Update user storage (if user still exists)
@@ -103,9 +103,9 @@ class FileCleanupService:
                 elif file_upload.current_views >= file_upload.max_views:
                     stats['deleted_by_views'] += 1
                 
-                # Delete from S3
+                # Delete from storage (R2/Firebase/Local)
                 if self.s3_manager.delete_file(file_upload.s3_key):
-                    stats['deleted_from_s3'] += 1
+                    stats['deleted_from_storage'] += 1
                     stats['storage_freed'] += file_upload.file_size
                 
                 # Update user storage
@@ -125,18 +125,19 @@ class FileCleanupService:
         logger.info(f"Cleanup completed: {stats}")
         return stats
     
-    def cleanup_orphaned_s3_files(self):
+    def cleanup_orphaned_storage_files(self):
         """
-        Find and delete S3 files that don't have database records
+        Find and delete storage files that don't have database records
         (Advanced feature - be careful with this)
         """
-        # This would require listing all S3 objects and comparing with DB
+        # This would require listing all storage objects and comparing with DB
         # Left as a placeholder for future implementation
         pass
     
     def notify_expiring_files(self, hours_threshold=24):
         """
-        Send notifications for files that will expire soon
+        Send email notifications for files that will expire soon
+        (Requires Brevo API key - optional feature)
         
         Args:
             hours_threshold: Notify files expiring within this many hours

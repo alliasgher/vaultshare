@@ -27,7 +27,7 @@
 
 ❌ **Redis** - Not needed for MVP  
 ❌ **Celery** - Background tasks run synchronously  
-❌ **AWS S3** - Using Firebase instead  
+❌ **AWS S3** - Using Cloudflare R2 (better free tier)  
 ❌ **Complex caching** - Using Django's dummy cache  
 
 ---
@@ -60,7 +60,7 @@ Total: $5/month
 ```
 Frontend: Vercel (FREE)
 Backend + Database: Railway ($5-10/month)
-Storage: Firebase (FREE 5GB)
+Storage: Cloudflare R2 (FREE 10GB)
 Email: Brevo (FREE 300/day)
 
 Total: $5-10/month
@@ -107,8 +107,9 @@ npm run dev
 ## Production Setup
 
 See individual guides:
-- **Firebase:** `FIREBASE_QUICKSTART.md` (5 min)
-- **Brevo Email:** `BREVO_SETUP.md` (3 min)
+- **R2 Storage:** `R2_QUICKSTART.md` (3 min) - **Recommended**
+- **Firebase (Alternative):** `FIREBASE_QUICKSTART.md` (5 min)
+- **Brevo Email:** `BREVO_SETUP.md` (3 min) - **Optional**
 - **Deployment:** Choose platform, connect GitHub, done!
 
 ---
@@ -189,8 +190,8 @@ Cost: FREE (10GB + unlimited egress)
 
 **Minimum to run:**
 - Django backend
-- SQLite database  
-- Firebase storage
+- SQLite database (dev) / PostgreSQL (prod)
+- Local storage (dev) / Cloudflare R2 (prod)
 - Next.js frontend
 
 **Total cost:** $0-5/month  
@@ -198,9 +199,8 @@ Cost: FREE (10GB + unlimited egress)
 **Perfect for:** MVP, testing, small projects  
 
 **Add when you grow:**
-- Brevo emails (still free!)
+- Brevo emails (optional - still free!)
 - Redis caching
 - Celery background tasks
-- PostgreSQL production database
 
 🎉 **You have a production-ready file sharing platform for FREE!**
