@@ -10,23 +10,37 @@ A production-ready, FREE file-sharing platform built with Django + Next.js, feat
 
 ### Core Functionality
 - **100% Accurate View Tracking** - All files proxied through backend (no direct URLs)
+- **Session-Based View Counting** - Refreshes within session window don't count as new views (configurable: 5/15/30/60/120 minutes)
+- **Consumer Access Control** - Require sign-in for file access and limit views per consumer
+- **Real-Time Analytics** - Auto-refreshing analytics dashboard (updates every 5 seconds)
 - **Screenshot Protection** - Watermarks, keyboard blocking, alerts, DevTools detection
 - **View-Only Files** - Disable downloads selectively
 - **Password Protection** - Optional file passwords
 - **Time-Limited Access** - Set expiration times
-- **View-Limited Access** - Restrict number of views
+- **View-Limited Access** - Restrict total number of views
 - **Email Notifications** - File access alerts (via Brevo)
 - **Automatic Cleanup** - Scheduled deletion of expired files
+
+### Advanced Access Control
+- **Require Sign-In** - Force consumers to authenticate before accessing files
+- **Per-Consumer View Limits** - Restrict how many times each user can view a file (5/10/25/50/100 views)
+- **Session Tracking** - Track unique sessions (not individual page refreshes)
+  - Authenticated users tracked by user ID (survives IP changes, device switches)
+  - Anonymous users tracked by IP address
+- **Session-Grouped Analytics** - Deduplicated view logs (shows both view & download actions, hides duplicate refreshes)
 
 ### Security Features
 - JWT-based authentication
 - Backend file proxy (100% tracking accuracy)
+- Session-based view counting (prevents refresh spam)
+- Atomic database updates (F() expressions prevent race conditions)
 - Screenshot detection & deterrents
 - Multiple watermarks (diagonal, corners, background)
 - Keyboard shortcut blocking
 - DevTools detection
 - IP tracking and logging
 - Anti-cache headers
+- Consumer-level access control
 
 ---
 
@@ -57,29 +71,104 @@ vaultshare/
 │   │   ├── settings/
 │   │   │   ├── base.py          # Shared settings
 │   │   │   ├── development.py   # Dev environment (SQLite, local storage)
-│   │   │   └── production.py    # Production (PostgreSQL, Firebase)
+│   │   │   └── production.py    # Production (PostgreSQL, R2/Firebase)
 │   │   ├── urls.py
 │   │   ├── wsgi.py
 │   │   └── asgi.py
 │   ├── apps/
 │   │   ├── users/               # Authentication & user management
-│   │   ├── files/               # File upload, access control, Firebase integration
+│   │   ├── files/               # File upload, access control, session tracking
+│   │   │   ├── models.py        # FileUpload & AccessLog models
+│   │   │   ├── views.py         # File access endpoints (validate, serve, analytics)
+│   │   │   ├── serializers.py   # API serializers
+│   │   │   └── migrations/      # Database migrations (includes consumer access control)
 │   │   └── notifications/       # Email notifications (Brevo)
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/
 │   ├── app/
-│   │   ├── dashboard/          # User dashboard
-│   │   ├── access/[token]/     # Public file access with screenshot protection
-│   │   └── login/              # Authentication
-│   ├── components/             # Reusable components
-│   ├── lib/                    # Utilities
+│   │   ├── dashboard/           # User dashboard with real-time analytics
+│   │   ├── access/[token]/      # Public file access with screenshot protection
+│   │   └── login/               # Authentication
+│   ├── components/
+│   │   ├── FileUpload.tsx       # Upload form with session duration & consumer controls
+│   │   └── ...                  # Other reusable components
+│   ├── lib/
+│   │   ├── api.ts               # API client with auto-logout
+│   │   └── ...                  # Other utilities
 │   ├── package.json
 │   └── .env.example
-├── FIREBASE_QUICKSTART.md      # 5-min Firebase setup
-├── BREVO_SETUP.md              # 3-min email setup (optional)
-├── TECH_STACK.md               # Complete tech overview
+├── R2_QUICKSTART.md             # 3-min Cloudflare R2 setup (recommended!)
+├── FIREBASE_QUICKSTART.md       # 5-min Firebase setup (alternative)
+├── BREVO_SETUP.md               # 3-min email setup (optional)
+├── TECH_STACK.md                # Complete tech overview
 └── README.md
+```
+
+---
+
+## 🔑 How It Works
+
+### Session-Based View Counting
+VaultShare uses intelligent session tracking to prevent inflated view counts from page refreshes:
+
+1. **First Access**: User views a file → creates AccessLog → increments `current_views`
+2. **Within Session Window** (default 15 min): User refreshes or opens in new tab → creates AccessLog but does NOT increment `current_views`
+3. **After Session Expires**: Same user accesses again → creates new session → increments `current_views`
+
+**Session Tracking:**
+- **Authenticated users**: Tracked by user ID (survives IP changes, device switches)
+- **Anonymous users**: Tracked by IP address (new IP = new session)
+- **Both view and download** count as session activity (either resets the timer)
+- **Every access is logged** (for complete audit trail)
+
+**Configurable Session Duration:**
+- 5 minutes (quick checks)
+- 15 minutes (default - typical reading time)
+- 30 minutes (longer documents)
+- 60 minutes (presentations)
+- 120 minutes (extended sessions)
+
+### Consumer Access Control
+Control who can access your files and how often:
+
+**Require Sign-In:**
+- Force consumers to authenticate before viewing
+- Track individual users (not just IP addresses)
+- Prevent anonymous sharing
+
+**Per-Consumer View Limits:**
+- Limit how many times each user can view a file
+- Options: 5, 10, 25, 50, or 100 views per consumer
+- Authenticated users tracked by ID, anonymous by IP
+- Survives device switches for signed-in users
+
+### Real-Time Analytics
+Monitor file access in real-time:
+- **Auto-refresh every 5 seconds** when analytics panel is open
+- **Session-grouped logs** - deduplicated view of access attempts
+- **Shows both view and download** actions (even in same session)
+- **Hides duplicate refreshes** within the same session window
+- **Summary statistics**: Successful accesses, blocked attempts, downloads, unique IPs
+
+### File Access Flow
+```
+1. Consumer clicks file link
+   ↓
+2. Frontend validates access (checks password, expiration, view limits)
+   - No logging at this stage (prevents premature counting)
+   ↓
+3. Consumer clicks "View" or "Download" button
+   ↓
+4. Backend checks for active session
+   - Has session within time window? → Log access, DON'T increment
+   - No active session? → Log access, INCREMENT view count
+   ↓
+5. File served through backend proxy
+   - 100% accurate tracking (no direct URLs)
+   - Watermarks applied (if screenshot protection enabled)
+   ↓
+6. Analytics auto-refresh shows new access log
 ```
 
 ---
@@ -139,7 +228,55 @@ npm run dev
 
 Frontend runs at: http://localhost:3000
 
-## 💰 Cost: $0-5/month
+## � File Upload Options
+
+When uploading a file, you can configure:
+
+### Basic Settings
+- **File selection** - Drag & drop or click to browse
+- **Password protection** - Optional password requirement (bcrypt hashed)
+- **Expiration time** - 1 hour, 24 hours, 7 days, or 30 days
+- **Max views** - Total view limit (10, 25, 50, 100, 250, 500, or unlimited)
+
+### Advanced Access Control
+- **Session Duration** - Time window for view counting (5, 15, 30, 60, or 120 minutes)
+  - Refreshes within this window don't count as new views
+  - Default: 15 minutes (typical reading time)
+- **Require Sign-In** - Force consumers to authenticate before access
+  - Enables tracking by user ID (not just IP)
+  - Prevents anonymous sharing
+- **Max Views Per Consumer** - Limit views per individual user (5, 10, 25, 50, or 100)
+  - Works with both signed-in users and anonymous (IP-based)
+  - Independent of total max views
+
+### Security Options
+- **Screenshot Protection** - Enable watermarks and detection
+- **Disable Download** - View-only mode (no download button)
+- **Email Notifications** - Get alerted when file is accessed (requires Brevo setup)
+
+### Example Configurations
+
+**Quick Share (Minimal Restrictions)**
+- Session Duration: 15 minutes
+- Max Views: Unlimited
+- No password, no sign-in required
+
+**Confidential Document (Maximum Security)**
+- Require Sign-In: ✅
+- Max Views Per Consumer: 5
+- Session Duration: 30 minutes
+- Password: ✅
+- Screenshot Protection: ✅
+- Disable Download: ✅
+- Expiration: 24 hours
+
+**Presentation Viewing**
+- Session Duration: 60 minutes (long viewing time)
+- Max Views: 50
+- Screenshot Protection: ✅
+- No password (easy sharing)
+
+## �💰 Cost: $0-5/month
 
 ### Development (Local)
 - Database: SQLite (FREE - on your computer)
@@ -247,10 +384,13 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 Done! You have a production app running for $0-5/month.
 
-## � Security Features
+## 🔒 Security Features
 
 ✅ JWT token authentication  
 ✅ Backend file proxy (100% accurate tracking)  
+✅ Session-based view counting (F() expressions prevent race conditions)  
+✅ Atomic database updates (no duplicate counting)  
+✅ Consumer access control (require sign-in + per-user limits)  
 ✅ Screenshot detection & alerts  
 ✅ Multiple watermarks (diagonal, corners, background)  
 ✅ Keyboard shortcut blocking (Cmd+Shift+3/4/5, Print Screen)  
@@ -258,17 +398,38 @@ Done! You have a production app running for $0-5/month.
 ✅ Right-click disabled  
 ✅ Text selection disabled  
 ✅ Tab visibility monitoring  
-✅ IP logging  
+✅ IP logging (with session tracking)  
 ✅ Anti-cache headers  
 ✅ Password hashing (bcrypt)  
+✅ Auto-logout on 401 errors (stale token handling)  
 
-## � Key Design Decisions
+## 🎯 Key Design Decisions
 
 ### Why Backend Proxy?
 - ✅ 100% accurate view tracking (no trust in client-side code)
 - ✅ Can add watermarks server-side
 - ✅ Can detect screenshot tools/headless browsers
 - ✅ Prevents direct URL sharing
+- ✅ Enables session-based tracking
+
+### Why Session-Based Counting?
+- ✅ Prevents inflated counts from page refreshes
+- ✅ More accurate representation of actual viewers
+- ✅ Configurable session duration (5-120 minutes)
+- ✅ Still maintains complete audit trail (all accesses logged)
+- ✅ Works for both authenticated and anonymous users
+
+### Why F() Expressions for View Counting?
+- ✅ Atomic database updates (prevents race conditions)
+- ✅ No read-modify-write cycle (thread-safe)
+- ✅ Guaranteed increment persistence
+- ✅ Works correctly under high concurrency
+
+### Why Separate validate() and serve() Endpoints?
+- ✅ validate() = permission checks only (no logging)
+- ✅ serve() = actual file access (logging + counting)
+- ✅ Prevents premature view counting
+- ✅ User sees "View" button before count increments
 
 ### Why R2 over S3/Firebase?
 - ✅ More generous free tier (10 GB vs 5 GB)
