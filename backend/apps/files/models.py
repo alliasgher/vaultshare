@@ -113,13 +113,13 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
             return self.access_logs.filter(
                 consumer_id=consumer_id,
                 access_granted=True,
-                access_method='view'
+                access_method__in=['view', 'download']  # Count both views and downloads
             ).count()
         elif ip_address:
             return self.access_logs.filter(
                 ip_address=ip_address,
                 access_granted=True,
-                access_method='view',
+                access_method__in=['view', 'download'],  # Count both views and downloads
                 consumer__isnull=True  # Only count anonymous views by IP
             ).count()
         return 0

@@ -289,7 +289,8 @@ class FileAccessViewSet(viewsets.ViewSet):
         # Check consumer access controls
         if file_upload.require_signin:
             if not request.user.is_authenticated:
-                self.create_access_log(file_upload, request, False, reason='signin_required')
+                consumer = request.user if request.user.is_authenticated else None
+                self.create_access_log(file_upload, request, False, reason='signin_required', consumer=consumer)
                 return Response(
                     {'error': 'You must be signed in to access this file'},
                     status=status.HTTP_401_UNAUTHORIZED
