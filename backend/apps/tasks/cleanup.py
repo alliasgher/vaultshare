@@ -22,10 +22,16 @@ class FileCleanupService:
     def cleanup_expired_files(self):
         """
         Delete expired files from database and S3
-        Includes files that:
-        - Have passed their expiration date
-        - Have reached their view limit
-        - Are older than MAX_FILE_AGE_DAYS (30 days by default)
+        
+        Files older than MAX_FILE_AGE_DAYS (30 days) are HARD DELETED (completely removed).
+        Files that expired recently are SOFT DELETED (analytics preserved for ~30 days).
+        
+        Hard delete criteria:
+        - Created more than MAX_FILE_AGE_DAYS ago (30 days)
+        
+        Soft delete criteria:
+        - Expired by expiration date (but < 30 days old)
+        - Reached view limit (but < 30 days old)
         
         Returns:
             dict: Statistics about cleanup operation
@@ -34,17 +40,22 @@ class FileCleanupService:
         max_age_days = settings.VAULTSHARE.get('MAX_FILE_AGE_DAYS', 30)
         age_threshold = now - timedelta(days=max_age_days)
         
-        # Find expired files (by expiry date, view limit, OR age)
+        # HARD DELETE: Files older than 30 days (completely remove from DB)
+        old_files = FileUpload.objects.filter(
+            created_at__lt=age_threshold
+        )[:self.batch_size]
+        
+        # SOFT DELETE: Recently expired files (keep analytics for now)
         expired_files = FileUpload.objects.filter(
-            Q(expires_at__lt=now) | 
-            Q(current_views__gte=F('max_views')) |
-            Q(created_at__lt=age_threshold),  # Delete files older than MAX_FILE_AGE_DAYS
+            Q(expires_at__lt=now) | Q(current_views__gte=F('max_views')),
+            created_at__gte=age_threshold,  # Only files < 30 days old
             is_deleted=False
         )[:self.batch_size]
         
         stats = {
             'total_processed': 0,
-            'deleted_from_db': 0,
+            'hard_deleted': 0,
+            'soft_deleted': 0,
             'deleted_from_s3': 0,
             'failed': 0,
             'storage_freed': 0,
@@ -53,6 +64,35 @@ class FileCleanupService:
             'deleted_by_age': 0,
         }
         
+        # HARD DELETE old files (> 30 days)
+        for file_upload in old_files:
+            try:
+                stats['total_processed'] += 1
+                stats['deleted_by_age'] += 1
+                
+                # Delete from S3
+                if self.s3_manager.delete_file(file_upload.s3_key):
+                    stats['deleted_from_s3'] += 1
+                    stats['storage_freed'] += file_upload.file_size
+                
+                # Update user storage (if user still exists)
+                if file_upload.user:
+                    try:
+                        file_upload.user.update_storage_used(-file_upload.file_size)
+                    except:
+                        pass  # User may have been deleted
+                
+                # HARD DELETE - completely remove from database
+                file_upload.delete()
+                stats['hard_deleted'] += 1
+                
+                logger.info(f"Hard deleted old file (30+ days): {file_upload.id}")
+                
+            except Exception as e:
+                stats['failed'] += 1
+                logger.error(f"Error hard deleting file {file_upload.id}: {e}")
+        
+        # SOFT DELETE recently expired files (preserve analytics)
         for file_upload in expired_files:
             try:
                 stats['total_processed'] += 1
@@ -62,8 +102,6 @@ class FileCleanupService:
                     stats['deleted_by_expiry'] += 1
                 elif file_upload.current_views >= file_upload.max_views:
                     stats['deleted_by_views'] += 1
-                elif file_upload.created_at < age_threshold:
-                    stats['deleted_by_age'] += 1
                 
                 # Delete from S3
                 if self.s3_manager.delete_file(file_upload.s3_key):
@@ -74,15 +112,15 @@ class FileCleanupService:
                 if file_upload.user:
                     file_upload.user.update_storage_used(-file_upload.file_size)
                 
-                # Soft delete the file record
+                # SOFT DELETE - keep database record for analytics
                 file_upload.soft_delete()
-                stats['deleted_from_db'] += 1
+                stats['soft_deleted'] += 1
                 
-                logger.info(f"Cleaned up expired file: {file_upload.id}")
+                logger.info(f"Soft deleted expired file: {file_upload.id}")
                 
             except Exception as e:
                 stats['failed'] += 1
-                logger.error(f"Error cleaning up file {file_upload.id}: {e}")
+                logger.error(f"Error soft deleting file {file_upload.id}: {e}")
         
         logger.info(f"Cleanup completed: {stats}")
         return stats
