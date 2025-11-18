@@ -197,8 +197,8 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
     
     def get_session_grouped_logs(self):
         """
-        Get access logs grouped by session.
-        Returns one log per session, with combined info if both view and download occurred.
+        Get access logs grouped by session, showing separate entries for view and download.
+        If both view and download happened in same session, both are shown.
         """
         from django.utils import timezone
         from datetime import timedelta
@@ -211,42 +211,37 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
             return []
         
         session_duration = timedelta(minutes=self.session_duration)
-        grouped_sessions = []
-        current_session = None
+        result = []
+        sessions = {}  # Track sessions by key
         
         for log in all_logs:
             # Determine session key (consumer_id or IP)
-            session_key = log.consumer_id if log.consumer else log.ip_address
+            session_key = f"{log.consumer_id or 'anon'}_{log.ip_address}"
             
-            # Check if this belongs to current session
-            if current_session and \
-               current_session['key'] == session_key and \
-               (log.created_at - current_session['first_access']) <= session_duration:
-                # Same session - update with latest info
-                if log.access_method == 'download':
-                    current_session['downloaded'] = True
-                if log.access_method == 'view':
-                    current_session['viewed'] = True
-                current_session['last_access'] = log.created_at
+            # Find if this belongs to an existing session
+            belongs_to_session = None
+            if session_key in sessions:
+                for session in sessions[session_key]:
+                    if (log.created_at - session['start_time']) <= session_duration:
+                        belongs_to_session = session
+                        break
+            
+            if belongs_to_session:
+                # Same session - add this log if it's a different action
+                if log.access_method not in belongs_to_session['methods']:
+                    result.append(log)
+                    belongs_to_session['methods'].add(log.access_method)
             else:
                 # New session
-                if current_session:
-                    grouped_sessions.append(current_session['log'])
-                
-                current_session = {
-                    'key': session_key,
-                    'first_access': log.created_at,
-                    'last_access': log.created_at,
-                    'viewed': log.access_method == 'view',
-                    'downloaded': log.access_method == 'download',
-                    'log': log
-                }
+                result.append(log)
+                if session_key not in sessions:
+                    sessions[session_key] = []
+                sessions[session_key].append({
+                    'start_time': log.created_at,
+                    'methods': {log.access_method}
+                })
         
-        # Add the last session
-        if current_session:
-            grouped_sessions.append(current_session['log'])
-        
-        return grouped_sessions
+        return result
 
 
 class AccessLog(TimeStampedModel):
