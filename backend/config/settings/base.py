@@ -222,5 +222,6 @@ VAULTSHARE = {
     'MAX_EXPIRY_HOURS': 168,  # 7 days
     'DEFAULT_MAX_VIEWS': 10,
     'CLEANUP_BATCH_SIZE': 100,
+    'MAX_FILE_AGE_DAYS': 30,  # Delete all files older than 30 days regardless of expiry
     'FRONTEND_URL': os.getenv('FRONTEND_URL', 'http://localhost:3000'),
 }

@@ -22,15 +22,23 @@ class FileCleanupService:
     def cleanup_expired_files(self):
         """
         Delete expired files from database and S3
+        Includes files that:
+        - Have passed their expiration date
+        - Have reached their view limit
+        - Are older than MAX_FILE_AGE_DAYS (30 days by default)
         
         Returns:
             dict: Statistics about cleanup operation
         """
         now = timezone.now()
+        max_age_days = settings.VAULTSHARE.get('MAX_FILE_AGE_DAYS', 30)
+        age_threshold = now - timedelta(days=max_age_days)
         
-        # Find expired files
+        # Find expired files (by expiry date, view limit, OR age)
         expired_files = FileUpload.objects.filter(
-            Q(expires_at__lt=now) | Q(current_views__gte=F('max_views')),
+            Q(expires_at__lt=now) | 
+            Q(current_views__gte=F('max_views')) |
+            Q(created_at__lt=age_threshold),  # Delete files older than MAX_FILE_AGE_DAYS
             is_deleted=False
         )[:self.batch_size]
         
@@ -39,12 +47,23 @@ class FileCleanupService:
             'deleted_from_db': 0,
             'deleted_from_s3': 0,
             'failed': 0,
-            'storage_freed': 0
+            'storage_freed': 0,
+            'deleted_by_expiry': 0,
+            'deleted_by_views': 0,
+            'deleted_by_age': 0,
         }
         
         for file_upload in expired_files:
             try:
                 stats['total_processed'] += 1
+                
+                # Track deletion reason
+                if file_upload.expires_at < now:
+                    stats['deleted_by_expiry'] += 1
+                elif file_upload.current_views >= file_upload.max_views:
+                    stats['deleted_by_views'] += 1
+                elif file_upload.created_at < age_threshold:
+                    stats['deleted_by_age'] += 1
                 
                 # Delete from S3
                 if self.s3_manager.delete_file(file_upload.s3_key):
