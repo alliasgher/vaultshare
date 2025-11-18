@@ -311,10 +311,7 @@ class FileAccessViewSet(viewsets.ViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
         
-        # Access granted - return file details
-        consumer = request.user if request.user.is_authenticated else None
-        self.create_access_log(file_upload, request, True, consumer=consumer)
-        
+        # Access granted - return file details (no logging here, only log actual access in serve())
         return Response({
             'success': True,
             'file': FileDetailSerializer(file_upload).data,
