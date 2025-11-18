@@ -20,8 +20,8 @@ class FileUploadSerializer(serializers.ModelSerializer):
             'id', 'file', 'filename', 'original_filename', 'file_size',
             'file_size_formatted', 'content_type', 'access_token',
             'expiry_hours', 'expires_at', 'max_views', 'current_views',
-            'disable_download', 'require_signin', 'max_views_per_consumer',
-            'password', 'access_url', 'created_at'
+            'session_duration', 'disable_download', 'require_signin', 
+            'max_views_per_consumer', 'password', 'access_url', 'created_at'
         ]
         read_only_fields = [
             'id', 'filename', 'original_filename', 'file_size', 'content_type', 'access_token',
@@ -89,7 +89,7 @@ class FileDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'original_filename', 'file_size', 'file_size_formatted',
             'content_type', 'expires_at', 'time_remaining', 'max_views',
-            'current_views', 'views_remaining', 'disable_download',
+            'current_views', 'views_remaining', 'session_duration', 'disable_download',
             'require_signin', 'max_views_per_consumer', 'created_at'
         ]
 

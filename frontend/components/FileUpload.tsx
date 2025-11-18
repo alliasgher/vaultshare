@@ -18,6 +18,7 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
   const [password, setPassword] = useState('');
   const [expiryHours, setExpiryHours] = useState(24);
   const [maxViews, setMaxViews] = useState(10);
+  const [sessionDuration, setSessionDuration] = useState(15);
   const [disableDownload, setDisableDownload] = useState(false);
   const [requireSignin, setRequireSignin] = useState(false);
   const [maxViewsPerConsumer, setMaxViewsPerConsumer] = useState(0);
@@ -47,6 +48,7 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
         password: password || undefined,
         expiry_hours: expiryHours,
         max_views: maxViews,
+        session_duration: sessionDuration,
         disable_download: disableDownload,
         require_signin: requireSignin,
         max_views_per_consumer: maxViewsPerConsumer,
@@ -60,6 +62,7 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
       setPassword('');
       setExpiryHours(24);
       setMaxViews(10);
+      setSessionDuration(15);
       setDisableDownload(false);
       setRequireSignin(false);
       setMaxViewsPerConsumer(0);
@@ -221,6 +224,27 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
                 <option value={50}>50 views</option>
                 <option value={100}>100 views</option>
               </select>
+            </div>
+
+            <div>
+              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <ClockIcon className="w-4 h-4 mr-2" />
+                View session duration
+              </label>
+              <select
+                value={sessionDuration}
+                onChange={(e) => setSessionDuration(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value={5}>5 minutes</option>
+                <option value={15}>15 minutes</option>
+                <option value={30}>30 minutes</option>
+                <option value={60}>1 hour</option>
+                <option value={120}>2 hours</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Refreshes within this time won't count as new views
+              </p>
             </div>
           </div>
 

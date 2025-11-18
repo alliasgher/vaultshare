@@ -49,6 +49,12 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
     max_views = models.IntegerField(default=10)
     current_views = models.IntegerField(default=0)
     
+    # View session tracking
+    session_duration = models.IntegerField(
+        default=15,
+        help_text="Duration in minutes for a single view session (refreshes within this time don't count as new views)"
+    )
+    
     # Consumer access control
     require_signin = models.BooleanField(
         default=False,
@@ -106,6 +112,32 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
         """Increment view counter"""
         self.current_views += 1
         self.save(update_fields=['current_views', 'updated_at'])
+    
+    def has_active_session(self, consumer_id=None, ip_address=None):
+        """
+        Check if there's an active view session for this consumer/IP.
+        A session is active if there was a successful access within the session_duration.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        session_threshold = timezone.now() - timedelta(minutes=self.session_duration)
+        
+        # Check for recent successful access
+        query = self.access_logs.filter(
+            access_granted=True,
+            access_method__in=['view', 'download'],
+            created_at__gte=session_threshold
+        )
+        
+        if consumer_id:
+            query = query.filter(consumer_id=consumer_id)
+        elif ip_address:
+            query = query.filter(ip_address=ip_address, consumer__isnull=True)
+        else:
+            return False
+        
+        return query.exists()
 
     def get_consumer_view_count(self, consumer_id=None, ip_address=None):
         """Get view count for a specific consumer"""

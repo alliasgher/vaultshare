@@ -161,6 +161,9 @@ export const filesAPI = {
     if (data.password) formData.append('password', data.password);
     if (data.expiry_hours) formData.append('expiry_hours', data.expiry_hours.toString());
     if (data.max_views) formData.append('max_views', data.max_views.toString());
+    if (data.session_duration !== undefined) {
+      formData.append('session_duration', data.session_duration.toString());
+    }
     if (data.disable_download !== undefined) {
       formData.append('disable_download', data.disable_download.toString());
     }

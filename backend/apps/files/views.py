@@ -455,10 +455,15 @@ class FileAccessViewSet(viewsets.ViewSet):
                         response['Pragma'] = 'no-cache'
                         response['Expires'] = '0'
                     
-                    # Only increment view counter when file is successfully served
-                    file_upload.increment_views()
+                    # Check for active session before incrementing view counter
+                    consumer_id = request.user.id if request.user.is_authenticated else None
+                    ip_address = self.get_client_ip(request) if not consumer_id else None
                     
-                    # Log successful access
+                    # Only increment if no active session exists (prevents duplicate counting on refresh)
+                    if not file_upload.has_active_session(consumer_id=consumer_id, ip_address=ip_address):
+                        file_upload.increment_views()
+                    
+                    # Log successful access (always log, even if session is active)
                     method = 'download' if is_download else 'view'
                     consumer = request.user if request.user.is_authenticated else None
                     self.create_access_log(file_upload, request, True, method=method, consumer=consumer)
@@ -501,10 +506,15 @@ class FileAccessViewSet(viewsets.ViewSet):
                 
                 response['Content-Length'] = len(file_content)
                 
-                # Only increment view counter when file is successfully served
-                file_upload.increment_views()
+                # Check for active session before incrementing view counter
+                consumer_id = request.user.id if request.user.is_authenticated else None
+                ip_address = self.get_client_ip(request) if not consumer_id else None
                 
-                # Log successful access
+                # Only increment if no active session exists (prevents duplicate counting on refresh)
+                if not file_upload.has_active_session(consumer_id=consumer_id, ip_address=ip_address):
+                    file_upload.increment_views()
+                
+                # Log successful access (always log, even if session is active)
                 method = 'download' if is_download else 'view'
                 consumer = request.user if request.user.is_authenticated else None
                 self.create_access_log(file_upload, request, True, method=method, consumer=consumer)
@@ -547,10 +557,15 @@ class FileAccessViewSet(viewsets.ViewSet):
                     
                     response['Content-Length'] = len(file_content)
                     
-                    # Only increment view counter when file is successfully served
-                    file_upload.increment_views()
+                    # Check for active session before incrementing view counter
+                    consumer_id = request.user.id if request.user.is_authenticated else None
+                    ip_address = self.get_client_ip(request) if not consumer_id else None
                     
-                    # Log successful access
+                    # Only increment if no active session exists (prevents duplicate counting on refresh)
+                    if not file_upload.has_active_session(consumer_id=consumer_id, ip_address=ip_address):
+                        file_upload.increment_views()
+                    
+                    # Log successful access (always log, even if session is active)
                     method = 'download' if is_download else 'view'
                     consumer = request.user if request.user.is_authenticated else None
                     self.create_access_log(file_upload, request, True, method=method, consumer=consumer)

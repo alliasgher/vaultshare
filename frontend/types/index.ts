@@ -40,6 +40,7 @@ export interface FileUpload {
   expires_at: string;
   max_views: number;
   current_views: number;
+  session_duration: number;
   disable_download: boolean;
   require_signin: boolean;
   max_views_per_consumer: number;
@@ -52,6 +53,7 @@ export interface FileUploadRequest {
   password?: string;
   expiry_hours?: number;
   max_views?: number;
+  session_duration?: number;
   disable_download?: boolean;
   require_signin?: boolean;
   max_views_per_consumer?: number;
@@ -75,6 +77,7 @@ export interface FileAccessResponse {
     max_views: number;
     current_views: number;
     views_remaining: number;
+    session_duration: number;
     disable_download: boolean;
     require_signin: boolean;
     max_views_per_consumer: number;
