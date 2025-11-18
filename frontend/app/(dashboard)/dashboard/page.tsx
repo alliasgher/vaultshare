@@ -244,20 +244,22 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </div>
-                      <div className="ml-4 flex space-x-2">
+                      <div className="ml-4 flex flex-col space-y-2">
                         <button
                           onClick={() => handleViewAnalytics(file.id)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
+                          className="flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-md transition shadow-md hover:shadow-lg"
                           title="View Analytics"
                         >
-                          <ChartBarIcon className="h-5 w-5" />
+                          <ChartBarIcon className="h-5 w-5 mr-2" />
+                          Analytics
                         </button>
                         <button
                           onClick={() => handleDelete(file.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition"
+                          className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition"
                           title="Delete File"
                         >
-                          <TrashIcon className="h-5 w-5" />
+                          <TrashIcon className="h-4 w-4 mr-2" />
+                          Delete
                         </button>
                       </div>
                     </div>
