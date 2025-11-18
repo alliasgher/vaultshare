@@ -140,21 +140,46 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
         return query.exists()
 
     def get_consumer_view_count(self, consumer_id=None, ip_address=None):
-        """Get view count for a specific consumer"""
+        """
+        Get view count for a specific consumer by counting unique sessions.
+        A session is defined by the session_duration - multiple accesses within 
+        the same session window count as 1 view.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get all successful accesses for this consumer/IP, ordered by time
         if consumer_id:
-            return self.access_logs.filter(
+            logs = self.access_logs.filter(
                 consumer_id=consumer_id,
                 access_granted=True,
-                access_method__in=['view', 'download']  # Count both views and downloads
-            ).count()
+                access_method__in=['view', 'download']
+            ).order_by('created_at')
         elif ip_address:
-            return self.access_logs.filter(
+            logs = self.access_logs.filter(
                 ip_address=ip_address,
                 access_granted=True,
-                access_method__in=['view', 'download'],  # Count both views and downloads
-                consumer__isnull=True  # Only count anonymous views by IP
-            ).count()
-        return 0
+                access_method__in=['view', 'download'],
+                consumer__isnull=True
+            ).order_by('created_at')
+        else:
+            return 0
+        
+        if not logs.exists():
+            return 0
+        
+        # Count unique sessions by grouping accesses within session_duration
+        session_count = 0
+        last_session_time = None
+        session_duration = timedelta(minutes=self.session_duration)
+        
+        for log in logs:
+            if last_session_time is None or (log.created_at - last_session_time) > session_duration:
+                # New session started
+                session_count += 1
+                last_session_time = log.created_at
+        
+        return session_count
 
     def has_consumer_exceeded_limit(self, consumer_id=None, ip_address=None):
         """Check if consumer has exceeded their view limit"""
@@ -169,6 +194,59 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
         from django.conf import settings
         frontend_url = settings.VAULTSHARE['FRONTEND_URL']
         return f"{frontend_url}/access/{self.access_token}"
+    
+    def get_session_grouped_logs(self):
+        """
+        Get access logs grouped by session.
+        Returns one log per session, with combined info if both view and download occurred.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        all_logs = self.access_logs.filter(
+            access_granted=True
+        ).order_by('created_at')
+        
+        if not all_logs.exists():
+            return []
+        
+        session_duration = timedelta(minutes=self.session_duration)
+        grouped_sessions = []
+        current_session = None
+        
+        for log in all_logs:
+            # Determine session key (consumer_id or IP)
+            session_key = log.consumer_id if log.consumer else log.ip_address
+            
+            # Check if this belongs to current session
+            if current_session and \
+               current_session['key'] == session_key and \
+               (log.created_at - current_session['first_access']) <= session_duration:
+                # Same session - update with latest info
+                if log.access_method == 'download':
+                    current_session['downloaded'] = True
+                if log.access_method == 'view':
+                    current_session['viewed'] = True
+                current_session['last_access'] = log.created_at
+            else:
+                # New session
+                if current_session:
+                    grouped_sessions.append(current_session['log'])
+                
+                current_session = {
+                    'key': session_key,
+                    'first_access': log.created_at,
+                    'last_access': log.created_at,
+                    'viewed': log.access_method == 'view',
+                    'downloaded': log.access_method == 'download',
+                    'log': log
+                }
+        
+        # Add the last session
+        if current_session:
+            grouped_sessions.append(current_session['log'])
+        
+        return grouped_sessions
 
 
 class AccessLog(TimeStampedModel):

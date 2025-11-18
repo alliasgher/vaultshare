@@ -182,10 +182,17 @@ class FileUploadViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def access_logs(self, request, pk=None):
-        """Get access logs for a specific file"""
+        """
+        Get access logs for a specific file.
+        Returns session-grouped logs (one entry per session) to avoid showing
+        duplicate entries when user both viewed and downloaded in same session.
+        """
         file_upload = self.get_object()
-        logs = AccessLog.objects.filter(file=file_upload)
-        serializer = AccessLogSerializer(logs, many=True)
+        
+        # Get session-grouped logs instead of all logs
+        grouped_logs = file_upload.get_session_grouped_logs()
+        
+        serializer = AccessLogSerializer(grouped_logs, many=True)
         return Response(serializer.data)
 
 
