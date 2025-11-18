@@ -109,9 +109,14 @@ class FileUpload(TimeStampedModel, SoftDeleteModel):
         )
 
     def increment_views(self):
-        """Increment view counter"""
-        self.current_views += 1
-        self.save(update_fields=['current_views', 'updated_at'])
+        """Increment view counter using F() to avoid race conditions"""
+        from django.db.models import F
+        FileUpload.objects.filter(pk=self.pk).update(
+            current_views=F('current_views') + 1,
+            updated_at=timezone.now()
+        )
+        # Refresh from database to get updated value
+        self.refresh_from_db(fields=['current_views', 'updated_at'])
     
     def has_active_session(self, consumer_id=None, ip_address=None):
         """
