@@ -62,6 +62,30 @@ export default function DashboardPage() {
     return () => clearInterval(refreshInterval);
   }, [isAuthenticated, router, hydrated]);
 
+  // Auto-refresh analytics when a file is selected
+  useEffect(() => {
+    if (!selectedFileId) return;
+
+    // Initial load
+    loadAnalytics(selectedFileId);
+
+    // Refresh analytics every 5 seconds
+    const analyticsInterval = setInterval(() => {
+      loadAnalytics(selectedFileId);
+    }, 5000);
+
+    return () => clearInterval(analyticsInterval);
+  }, [selectedFileId]);
+
+  const loadAnalytics = async (fileId: string) => {
+    try {
+      const logs = await filesAPI.getAccessLogs(fileId);
+      setAccessLogs(logs);
+    } catch (err) {
+      console.error('Failed to fetch access logs:', err);
+    }
+  };
+
   const loadFiles = async () => {
     try {
       const data = await filesAPI.list();
@@ -111,11 +135,7 @@ export default function DashboardPage() {
     setLoadingLogs(true);
     
     try {
-      const logs = await filesAPI.getAccessLogs(fileId);
-      setAccessLogs(logs);
-    } catch (err) {
-      console.error('Failed to fetch access logs:', err);
-      setAccessLogs([]);
+      await loadAnalytics(fileId);
     } finally {
       setLoadingLogs(false);
     }
