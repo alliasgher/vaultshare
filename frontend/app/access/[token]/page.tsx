@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { publicAPI } from '@/lib/api';
+import { withSlowResponseWarning } from '@/lib/api-helper';
 import { CloudArrowUpIcon, LockClosedIcon, ArrowDownTrayIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { downloadFile } from '@/lib/utils';
 import SecurePDFViewer from '@/components/SecurePDFViewer';
@@ -21,6 +22,7 @@ export default function FileAccessPage() {
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [needsPassword, setNeedsPassword] = useState(false);
+  const [slowResponseMessage, setSlowResponseMessage] = useState<string | null>(null);
 
   // Enhanced screenshot protection and security
   useEffect(() => {
@@ -121,12 +123,19 @@ export default function FileAccessPage() {
       setLoading(true);
 
       try {
-        const data = await publicAPI.validate({
-          access_token: token,
-          password: undefined,
-        });
+        const data = await withSlowResponseWarning(
+          () => publicAPI.validate({
+            access_token: token,
+            password: undefined,
+          }),
+          {
+            onSlowResponse: (msg) => setSlowResponseMessage(msg),
+            timeoutMessage: '⏳ Loading file... Server warming up (~30s on free tier)',
+          }
+        );
         setFileData(data);
         setNeedsPassword(false);
+        setSlowResponseMessage(null); // Clear message on success
       } catch (err: unknown) {
         const response = (err as { response?: { data?: { error?: string; password_required?: boolean } } })?.response;
         const errorData = response?.data;
@@ -136,6 +145,7 @@ export default function FileAccessPage() {
         } else {
           setError(errorData?.error || 'Failed to access file. Please check your access token.');
         }
+        setSlowResponseMessage(null); // Clear message on error
       } finally {
         setLoading(false);
       }
@@ -153,12 +163,19 @@ export default function FileAccessPage() {
     setLoading(true);
 
     try {
-      const data = await publicAPI.validate({
-        access_token: token,
-        password: password || undefined,
-      });
+      const data = await withSlowResponseWarning(
+        () => publicAPI.validate({
+          access_token: token,
+          password: password || undefined,
+        }),
+        {
+          onSlowResponse: (msg) => setSlowResponseMessage(msg),
+          timeoutMessage: '⏳ Validating password... Server warming up (~30s on free tier)',
+        }
+      );
       setFileData(data);
       setNeedsPassword(false);
+      setSlowResponseMessage(null); // Clear message on success
     } catch (err: unknown) {
       const response = (err as { response?: { data?: { error?: string; password_required?: boolean } } })?.response;
       const errorData = response?.data;
@@ -169,6 +186,7 @@ export default function FileAccessPage() {
       } else {
         setError(errorData?.error || 'Failed to access file. Please check your access token.');
       }
+      setSlowResponseMessage(null); // Clear message on error
     } finally {
       setLoading(false);
     }
@@ -251,6 +269,12 @@ export default function FileAccessPage() {
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Access Shared File</h1>
+
+            {slowResponseMessage && (
+              <div className="mb-6 rounded-md bg-amber-50 border border-amber-200 p-4">
+                <p className="text-sm text-amber-800">{slowResponseMessage}</p>
+              </div>
+            )}
 
             {needsPassword && !fileData ? (
               <form onSubmit={handleValidate} className="space-y-6">

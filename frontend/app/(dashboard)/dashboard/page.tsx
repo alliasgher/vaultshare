@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { filesAPI } from '@/lib/api';
+import { withSlowResponseWarning } from '@/lib/api-helper';
 import FileUploadComponent from '@/components/FileUpload';
 import {
   CloudArrowUpIcon,
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [slowResponseMessage, setSlowResponseMessage] = useState<string | null>(null);
 
   // Wait for Zustand to hydrate from localStorage
   useEffect(() => {
@@ -79,19 +81,35 @@ export default function DashboardPage() {
 
   const loadAnalytics = async (fileId: string) => {
     try {
-      const logs = await filesAPI.getAccessLogs(fileId);
+      const logs = await withSlowResponseWarning(
+        () => filesAPI.getAccessLogs(fileId),
+        {
+          onSlowResponse: (msg) => setSlowResponseMessage(msg),
+          timeoutMessage: '⏳ Loading analytics... Server warming up (~30s on free tier)',
+        }
+      );
       setAccessLogs(logs);
+      setSlowResponseMessage(null); // Clear message on success
     } catch (err) {
       console.error('Failed to fetch access logs:', err);
+      setSlowResponseMessage(null); // Clear message on error
     }
   };
 
   const loadFiles = async () => {
     try {
-      const data = await filesAPI.list();
+      const data = await withSlowResponseWarning(
+        () => filesAPI.list(),
+        {
+          onSlowResponse: (msg) => setSlowResponseMessage(msg),
+          timeoutMessage: '⏳ Loading files... Server warming up (~30s on free tier)',
+        }
+      );
       setFiles(Array.isArray(data) ? data : []);
+      setSlowResponseMessage(null); // Clear message on success
     } catch (error: any) {
       console.error('Failed to load files:', error);
+      setSlowResponseMessage(null); // Clear message on error
       // API interceptor will handle 401 and redirect automatically
       setFiles([]); // Set empty array on error
     } finally {
@@ -188,6 +206,15 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Upload File</h2>
             <FileUploadComponent onUploadSuccess={handleUploadSuccess} />
           </div>
+
+          {/* Slow Response Warning */}
+          {slowResponseMessage && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {slowResponseMessage}
+              </p>
+            </div>
+          )}
 
           {/* Files List */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

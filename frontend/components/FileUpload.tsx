@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { filesAPI } from '@/lib/api';
+import { withSlowResponseWarning } from '@/lib/api-helper';
 import { CloudArrowUpIcon, LockClosedIcon, ClockIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { formatFileSize } from '@/lib/utils';
 import type { FileUpload } from '@/types';
@@ -24,6 +25,7 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
   const [maxViewsPerConsumer, setMaxViewsPerConsumer] = useState(0);
   const [error, setError] = useState('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [slowResponseMessage, setSlowResponseMessage] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -43,18 +45,25 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
     setAbortController(controller);
 
     try {
-      const uploadedFile = await filesAPI.upload({
-        file: selectedFile,
-        password: password || undefined,
-        expiry_hours: expiryHours,
-        max_views: maxViews,
-        session_duration: sessionDuration,
-        disable_download: disableDownload,
-        require_signin: requireSignin,
-        max_views_per_consumer: maxViewsPerConsumer,
-      });
+      const uploadedFile = await withSlowResponseWarning(
+        () => filesAPI.upload({
+          file: selectedFile,
+          password: password || undefined,
+          expiry_hours: expiryHours,
+          max_views: maxViews,
+          session_duration: sessionDuration,
+          disable_download: disableDownload,
+          require_signin: requireSignin,
+          max_views_per_consumer: maxViewsPerConsumer,
+        }),
+        {
+          onSlowResponse: (msg) => setSlowResponseMessage(msg),
+          timeoutMessage: '⏳ Uploading... Server warming up (~30s on free tier)',
+        }
+      );
 
       setUploadProgress(100);
+      setSlowResponseMessage(null); // Clear message on success
       onUploadSuccess?.(uploadedFile);
       
       // Reset form
@@ -67,6 +76,7 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
       setRequireSignin(false);
       setMaxViewsPerConsumer(0);
     } catch (err: unknown) {
+      setSlowResponseMessage(null); // Clear message on error
       // Check if upload was cancelled
       if ((err as Error).name === 'CanceledError' || (err as Error).name === 'AbortError') {
         setError('Upload cancelled');
@@ -314,6 +324,11 @@ export default function FileUploadComponent({ onUploadSuccess }: FileUploadCompo
       {/* Upload Progress */}
       {uploading && (
         <div className="space-y-3">
+          {slowResponseMessage && (
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
+              <p className="text-sm text-amber-800">{slowResponseMessage}</p>
+            </div>
+          )}
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"

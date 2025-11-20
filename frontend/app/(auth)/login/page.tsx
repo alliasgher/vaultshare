@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authAPI } from '@/lib/api';
+import { withSlowResponseWarning } from '@/lib/api-helper';
 import { useAuthStore } from '@/lib/store';
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline';
 
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [slowResponseMessage, setSlowResponseMessage] = useState<string | null>(null);
 
   // Check authentication only once on mount
   useEffect(() => {
@@ -31,7 +33,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await authAPI.login({ email, password });
+      const response = await withSlowResponseWarning(
+        () => authAPI.login({ email, password }),
+        {
+          onSlowResponse: (msg) => setSlowResponseMessage(msg),
+          timeoutMessage: '⏳ Connecting to server... First request may take ~30s on free tier',
+        }
+      );
       // Login response includes user data, access token, and refresh token
       setAuth(response.user, response.access, response.refresh);
       router.push('/dashboard');
@@ -39,6 +47,7 @@ export default function LoginPage() {
       const error = err as { response?: { data?: { error?: string; detail?: string } } };
       const errorMessage = error?.response?.data?.error || error?.response?.data?.detail || 'Login failed. Please check your credentials.';
       setError(errorMessage);
+      setSlowResponseMessage(null); // Clear message on error
       setLoading(false); // Only set loading to false on error
     }
   };
@@ -70,6 +79,11 @@ export default function LoginPage() {
           {error && (
             <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
+          {slowResponseMessage && (
+            <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-200">{slowResponseMessage}</p>
             </div>
           )}
           <div className="rounded-md shadow-sm -space-y-px">
