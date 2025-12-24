@@ -50,10 +50,10 @@ export default function Home() {
                 <ArrowRightIcon className="ml-2 w-4 h-4" />
               </Link>
               <Link
-                href="/access"
+                href="/login"
                 className="inline-flex items-center px-6 py-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Access File
+                Sign In
               </Link>
             </div>
           </div>

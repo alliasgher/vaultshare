@@ -38,12 +38,6 @@ export default function AccessPage() {
               >
                 Go to Home
               </Link>
-              <Link
-                href="/login"
-                className="block w-full py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
-              >
-                Sign In
-              </Link>
             </div>
           </div>
         </div>
